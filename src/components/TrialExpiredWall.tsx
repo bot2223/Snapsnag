@@ -83,7 +83,7 @@ export function TrialExpiredWall({ status }: Props) {
 
         {!isPastDue && (
           <div className="flex gap-2 mb-8 mt-2">
-            {["Starter €29", "Pro €59", "Business €99"].map((p) => (
+            {["Starter €29.99", "Pro €59.99", "Business €99.99"].map((p) => (
               <span
                 key={p}
                 className="text-xs font-semibold bg-muted px-2.5 py-1 rounded-full text-muted-foreground"
