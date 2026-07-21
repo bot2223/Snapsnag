@@ -32,7 +32,7 @@ const PLANS: {
 }[] = [
   {
     id: "starter",
-    price: "€29/mo",
+    price: "€29.99/mo",
     features: [
       {
         labelKey: "billing.features.snagsPerMonth",
@@ -54,7 +54,7 @@ const PLANS: {
   },
   {
     id: "pro",
-    price: "€59/mo",
+    price: "€59.99/mo",
     badge: "Most popular",
     features: [
       {
@@ -77,7 +77,7 @@ const PLANS: {
   },
   {
     id: "business",
-    price: "€99/mo",
+    price: "€99.99/mo",
     features: [
       { labelKey: "billing.features.snagsUnlimited", included: true },
       { labelKey: "billing.features.teamMembersUnlimited", included: true },
