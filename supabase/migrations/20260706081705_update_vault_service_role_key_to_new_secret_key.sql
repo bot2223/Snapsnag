@@ -1,0 +1,12 @@
+-- The project migrated to Supabase's new API key system. Edge functions'
+-- reserved SUPABASE_SERVICE_ROLE_KEY env var now returns the new
+-- sb_secret_... key, not the legacy JWT that was stored in Vault — which
+-- is why every trigger-based notification (notify-subcontractor,
+-- notify-status-change, send-reminders) was getting 401'd.
+--
+-- The actual secret value was updated directly via Vault (Project
+-- Settings -> Vault -> service_role_key), NOT committed here — do not
+-- ever put a real key literal in a migration file. This file exists only
+-- so the change is visible in migration history.
+--
+-- select vault.update_secret('<vault secret id>', '<new sb_secret_ key>');

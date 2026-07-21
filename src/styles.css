@@ -1,0 +1,440 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.97 0.003 250);
+  --foreground: oklch(0.13 0.03 258);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.03 258);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.03 258);
+  --primary: oklch(0.68 0.19 46);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.96 0.005 250);
+  --secondary-foreground: oklch(0.2 0.03 258);
+  --muted: oklch(0.94 0.005 250);
+  --muted-foreground: oklch(0.48 0.02 258);
+  --accent: oklch(0.96 0.005 250);
+  --accent-foreground: oklch(0.2 0.03 258);
+  --destructive: oklch(0.56 0.24 27);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.88 0.008 250);
+  --input: oklch(0.88 0.008 250);
+  --ring: oklch(0.68 0.19 46);
+  --radius: 0.75rem;
+
+  /* SnapSnag brand */
+  --navy: oklch(0.20 0.05 258);
+  --navy-foreground: oklch(1 0 0);
+  --success: oklch(0.58 0.20 145);
+  --success-foreground: oklch(1 0 0);
+
+  /* Chart */
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.68 0.19 46);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.68 0.19 46);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.18 0.02 258);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.18 0.02 258);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.68 0.19 46);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.26 0.02 258);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.26 0.02 258);
+  --muted-foreground: oklch(0.65 0.02 258);
+  --accent: oklch(0.26 0.02 258);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.40 0.14 25);
+  --destructive-foreground: oklch(0.64 0.24 25);
+  --border: oklch(0.26 0.02 258);
+  --input: oklch(0.26 0.02 258);
+  --ring: oklch(0.68 0.19 46);
+  --navy: oklch(0.20 0.05 258);
+  --navy-foreground: oklch(1 0 0);
+  --success: oklch(0.58 0.20 145);
+  --success-foreground: oklch(1 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.68 0.19 46);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.68 0.19 46);
+}
+
+@theme inline {
+  /* Barlow Condensed for headings/display — fat, bold, legible */
+  --font-display: 'Barlow Condensed', sans-serif;
+  /* Barlow for body — same family, wider, very readable */
+  --font-sans: 'Barlow', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-navy: var(--navy);
+  --color-navy-foreground: var(--navy-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* All headings use Barlow Condensed Bold — fat and punchy */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  /* Nav labels, buttons, stat labels — also condensed for construction feel */
+  button, .font-bold, .font-semibold {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+  }
+}
+
+/* Blueprint Dot-Grid Background & Animations from new UI */
+@layer base {
+  body {
+    background-image: radial-gradient(circle, oklch(0.88 0.008 250 / 0.3) 0.5px, transparent 0.5px);
+    background-size: 20px 20px;
+    background-position: 0 0;
+    background-attachment: fixed;
+  }
+  .dark body {
+    background-image: radial-gradient(circle, oklch(0.26 0.02 258 / 0.3) 0.5px, transparent 0.5px);
+  }
+}
+
+@layer base {
+  @keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+  }
+  @keyframes softFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes softSlideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, var(--muted) 0%, var(--background) 50%, var(--muted) 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+  }
+  .soft-fade-in { animation: softFadeIn 0.4s ease-out; }
+  .soft-slide-up { animation: softSlideUp 0.4s ease-out; }
+
+  /* "Machined" card — subtle inset bevel, like a milled steel panel.
+     Used across dashboard/insights/settings/snag cards for a slight
+     tactile lift beyond a flat border. */
+  .card-machined {
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 0.6),
+      inset 0 -1px 0 0 oklch(0 0 0 / 0.03),
+      0 1px 2px 0 oklch(0 0 0 / 0.04);
+  }
+  .dark .card-machined {
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 0.04),
+      inset 0 -1px 0 0 oklch(0 0 0 / 0.3),
+      0 1px 2px 0 oklch(0 0 0 / 0.2);
+  }
+
+  /* Priority status pills — used on snag rows/tables */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+  }
+  .status-critical { background: oklch(0.56 0.24 27 / 0.12); color: oklch(0.56 0.24 27); }
+  .status-high     { background: oklch(0.68 0.19 46 / 0.12); color: oklch(0.68 0.19 46); }
+  .status-medium   { background: oklch(0.80 0.15 85 / 0.18); color: oklch(0.55 0.13 75); }
+  .status-low       { background: oklch(0.58 0.20 145 / 0.12); color: oklch(0.58 0.20 145); }
+  .dark .status-medium { color: oklch(0.85 0.15 85); }
+
+  /* Hazard-stripe edge — signature accent, used sparingly (priority bars,
+     critical-row left edge) rather than as a general decoration. */
+  .hazard-edge {
+    background: repeating-linear-gradient(
+      135deg,
+      var(--color-primary) 0px, var(--color-primary) 8px,
+      var(--color-navy) 8px, var(--color-navy) 16px
+    );
+  }
+
+  /* Tabular data emphasis — IDs, counts, stat numbers. Gives them a
+     slightly mechanical/readout feel distinct from prose text. */
+  .data-field {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Redline markup — snag detail signature ─────────────────────────────
+     The photo used to be treated as a marked-up site drawing with numbered
+     pins tied to the fields below. Dropped per feedback: the pins read as
+     clutter rather than a helpful system, and forcing a fixed aspect-ratio
+     crop under them cut off parts of real site photos. The photo is now a
+     plain framed image (object-contain, nothing overlaid), and the fields
+     below are a single plain card at every width — no numbering. */
+
+  /* Title block — drafting-stamp strip for category/priority/location,
+     modeled on the metadata block in the corner of a real drawing sheet. */
+  .title-block {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1.5px solid var(--navy);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .title-block > div {
+    padding: 0.55rem 0.75rem;
+    border-right: 1.5px solid var(--navy);
+    min-width: 0; /* required for truncate to actually clip in a grid cell */
+  }
+  .title-block > div:last-child {
+    border-right: none;
+  }
+  .title-block .tb-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    display: block;
+    margin-bottom: 0.15rem;
+  }
+
+  /* Mobile-only tightening — same 3 equal columns, same two-box structure,
+     just denser padding/type so "Location" clips to one line on 360–390px
+     phones instead of wrapping. Upper-bounded at 767px so it can never
+     touch the md:+ (desktop/tablet) rendering of this same markup. */
+  @media (max-width: 767px) {
+    .title-block-tight > div {
+      padding: 0.45rem 0.5rem;
+    }
+    .title-block-tight .tb-label {
+      font-size: 0.56rem;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.1rem;
+    }
+    .title-block-tight .status-pill {
+      font-size: 0.62rem;
+      padding: 0.15rem 0.45rem;
+    }
+  }
+
+  /* Detail field — Assigned to / Deadline / Status rows. One plain card,
+     same at every width; no icon, no number, just label left, value right. */
+  .detail-field {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 0;
+  }
+  .detail-field + .detail-field {
+    border-top: 1px solid var(--border);
+  }
+
+  /* Mobile-only — let the field's label and value share the row without
+     forcing the value into a single unbreakable line against the right
+     edge. The deadline value (date + duration) is the long case this
+     protects; it now wraps as whole words instead of clipping. */
+  @media (max-width: 767px) {
+    .detail-field .field-label-col {
+      flex-shrink: 0;
+      min-width: 4.75rem;
+    }
+    .detail-field .field-value-col {
+      min-width: 0;
+      flex: 1;
+    }
+  }
+
+  /* ── Billing comparison table — mobile-only ──────────────────────────────
+     Replaces three full-height stacked pricing cards (a ~1500px scroll with
+     6-7 repeated feature lines) with one horizontally-scrollable table:
+     each feature appears once, plans become columns, first column stays
+     pinned via position: sticky while the rest scrolls under it. Desktop
+     keeps the existing 3-card grid untouched (this table is md:hidden). */
+  .plan-table-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    overflow: hidden;
+  }
+  .plan-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .plan-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    width: 100%;
+    min-width: 560px;
+  }
+  .plan-table th,
+  .plan-table td {
+    text-align: left;
+    padding: 0;
+  }
+  .plan-table .feat-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    width: 11rem;
+    min-width: 11rem;
+    background: var(--card);
+    box-shadow: 1px 0 0 0 var(--border);
+    /* Safari/WebKit renders sticky table cells on the same paint layer as
+       the content scrolling beneath them, so a 1px sliver of the next
+       column's content can bleed through the pinned edge on scroll
+       (independent of the border-collapse issue fixed earlier). Forcing
+       its own compositing layer stops that. */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform;
+  }
+  .plan-table thead th {
+    padding: 0.875rem 0.75rem 0.625rem;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+  }
+  .plan-table .plan-col {
+    width: 7.5rem;
+    min-width: 7.5rem;
+    text-align: center;
+  }
+  .plan-table .plan-col.is-current {
+    background: oklch(0.68 0.19 46 / 0.05);
+  }
+  .plan-table tbody td.feat-col {
+    font-size: 0.78rem;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.3;
+  }
+  .plan-table tbody td.plan-col {
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .plan-table tbody tr:nth-child(even) td {
+    background: oklch(0.94 0.005 250 / 0.35);
+  }
+  .dark .plan-table tbody tr:nth-child(even) td {
+    background: oklch(0.26 0.02 258 / 0.35);
+  }
+  .plan-table tfoot td {
+    padding: 0.875rem 0.5rem;
+  }
+  .plan-table tfoot td.feat-col {
+    background: var(--card);
+  }
+
+  /* Hides the scrollbar on horizontally-scrollable rows (settings tab bar,
+     etc.) while keeping the element natively scrollable via touch/trackpad.
+     Not a Tailwind v4 built-in, hence defined here. */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Our PasswordInput component renders its own show/hide eye button.
+     Chrome/Edge also draw a native reveal-password icon on top of
+     type="password" fields, which visually doubles up as two eyes
+     stacked in the same corner. Suppress the browser's own icon so only
+     our custom one shows. (Firefox/Safari don't render one, so this is a
+     no-op there.) */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear {
+    display: none;
+  }
+  input[type="password"]::-webkit-reveal-icon,
+  input[type="password"]::-webkit-strong-password-auto-fill-button,
+  input[type="password"]::-webkit-credentials-auto-fill-button {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+  }
+}
