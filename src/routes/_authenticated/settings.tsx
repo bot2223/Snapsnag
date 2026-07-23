@@ -29,7 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { withTimeout } from "@/lib/query-utils";
 import { toast } from "sonner";
 import { validateImageFile } from "@/lib/file-validation";
-import { compressImage } from "@/lib/image-compress";
+import { compressImage, compressFloorPlanImage } from "@/lib/image-compress";
 import { validatePassword } from "@/lib/password-policy";
 import { getLogoSignedUrl, getSignedUrl } from "@/lib/storage-url";
 import { useTranslation } from "react-i18next";
@@ -64,6 +64,10 @@ function SettingsPage() {
   const [dragOver, setDragOver] = useState(false);
   const [newPlanName, setNewPlanName] = useState("");
   const [planUploadBusy, setPlanUploadBusy] = useState(false);
+  const [pendingPlanFile, setPendingPlanFile] = useState<File | null>(null);
+  const [pendingPlanPreviewUrl, setPendingPlanPreviewUrl] = useState<
+    string | null
+  >(null);
   const planFileRef = useRef<HTMLInputElement>(null);
 
   // Account tab — full name + password
@@ -166,16 +170,28 @@ function SettingsPage() {
     },
   });
 
-  const uploadFloorPlan = async (file: File) => {
-    if (!user) return;
+  const selectFloorPlanFile = async (file: File) => {
     const result = await validateImageFile(file);
     if (!result.valid) {
       toast.error(result.error);
       return;
     }
+    if (pendingPlanPreviewUrl) URL.revokeObjectURL(pendingPlanPreviewUrl);
+    setPendingPlanFile(file);
+    setPendingPlanPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const cancelFloorPlanSelection = () => {
+    if (pendingPlanPreviewUrl) URL.revokeObjectURL(pendingPlanPreviewUrl);
+    setPendingPlanFile(null);
+    setPendingPlanPreviewUrl(null);
+  };
+
+  const confirmUploadFloorPlan = async () => {
+    if (!user || !pendingPlanFile) return;
     setPlanUploadBusy(true);
     try {
-      const compressed = await compressImage(file);
+      const compressed = await compressFloorPlanImage(pendingPlanFile);
       const path = `${user.id}/${crypto.randomUUID()}.jpg`;
       const { error: upErr } = await supabase.storage
         .from("floor-plans")
@@ -188,6 +204,7 @@ function SettingsPage() {
       });
       if (insErr) throw insErr;
       setNewPlanName("");
+      cancelFloorPlanSelection();
       qc.invalidateQueries({ queryKey: ["floor-plans"] });
       toast.success(t("settings.floorPlans.uploaded"));
     } catch (e) {
@@ -559,6 +576,44 @@ function SettingsPage() {
                     </p>
                   )}
 
+                  {pendingPlanFile && pendingPlanPreviewUrl && (
+                    <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-3 space-y-3">
+                      <div className="rounded-xl overflow-hidden border bg-white aspect-[4/3] w-full max-w-xs mx-auto">
+                        <img
+                          src={pendingPlanPreviewUrl}
+                          alt={t("settings.floorPlans.previewAlt")}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <p className="text-xs text-center text-muted-foreground">
+                        {t("settings.floorPlans.confirmHint")}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={planUploadBusy}
+                          onClick={cancelFloorPlanSelection}
+                          className="flex-1 h-10 rounded-xl font-medium"
+                        >
+                          {t("settings.cancel")}
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={planUploadBusy}
+                          onClick={confirmUploadFloorPlan}
+                          className="flex-1 h-10 rounded-xl font-semibold"
+                        >
+                          {planUploadBusy ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            t("settings.floorPlans.confirmUpload")
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     <Input
                       value={newPlanName}
@@ -573,25 +628,18 @@ function SettingsPage() {
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) uploadFloorPlan(file);
+                        if (file) selectFloorPlanFile(file);
                         e.target.value = "";
                       }}
                     />
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={planUploadBusy}
                       onClick={() => planFileRef.current?.click()}
                       className="h-11 rounded-2xl font-medium shrink-0"
                     >
-                      {planUploadBusy ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4 mr-1" />
-                          {t("settings.floorPlans.uploadCta")}
-                        </>
-                      )}
+                      <Plus className="h-4 w-4 mr-1" />
+                      {t("settings.floorPlans.uploadCta")}
                     </Button>
                   </div>
                 </>

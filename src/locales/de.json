@@ -151,7 +151,10 @@
       "deleteConfirm": "Diesen Grundriss löschen? Bereits markierte Snags behalten ihre Stecknadel, aber das Bild ist weg.",
       "uploaded": "Grundriss hochgeladen",
       "deleted": "Grundriss gelöscht",
-      "lockedHint": "Upgrade auf Pro, um Grundrisse hochzuladen und Snags genau zu markieren."
+      "lockedHint": "Upgrade auf Pro, um Grundrisse hochzuladen und Snags genau zu markieren.",
+      "previewAlt": "Vorschau des ausgewählten Grundrisses",
+      "confirmHint": "Bild und Etage prüfen, bevor du speicherst",
+      "confirmUpload": "Grundriss speichern"
     }
   },
   "team": {

@@ -50,3 +50,56 @@ export async function compressImage(file: File): Promise<File> {
   const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
   return new File([blob], name, { type: "image/jpeg" });
 }
+
+/**
+ * Floor plans are line drawings with small text labels, not photos — the
+ * default photo settings (1600px, 0.8 quality) are tuned for snag photos
+ * and blur room labels/thin walls noticeably. This variant keeps more
+ * resolution and quality while still re-encoding to JPEG for consistent,
+ * reasonably-sized storage.
+ */
+const FLOOR_PLAN_MAX_DIMENSION = 2400;
+const FLOOR_PLAN_JPEG_QUALITY = 0.92;
+
+export async function compressFloorPlanImage(file: File): Promise<File> {
+  let source: Blob = file;
+
+  if (file.type === "image/heic" || file.type === "image/heif") {
+    const heic2any = (await import("heic2any")).default;
+    const converted = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: FLOOR_PLAN_JPEG_QUALITY,
+    });
+    source = Array.isArray(converted) ? converted[0] : converted;
+  }
+
+  const bitmap = await createImageBitmap(source);
+  const scale = Math.min(
+    1,
+    FLOOR_PLAN_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height),
+  );
+  const width = Math.round(bitmap.width * scale);
+  const height = Math.round(bitmap.height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas not supported");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Compression failed"))),
+      "image/jpeg",
+      FLOOR_PLAN_JPEG_QUALITY,
+    ),
+  );
+
+  const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+  return new File([blob], name, { type: "image/jpeg" });
+}
