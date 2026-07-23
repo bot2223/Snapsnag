@@ -113,7 +113,7 @@ function TallyRow({
 function InsightsPage() {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
-  const { plan, canUseCustomBranding } = usePlanLimits();
+  const { plan, canUseCustomBranding, canUseFloorPlans } = usePlanLimits();
   const qc = useQueryClient();
   const isPro = plan === "pro" || plan === "business";
 
@@ -209,6 +209,36 @@ function InsightsPage() {
         total: data.length,
         resolved: data.filter((s) => s.status === "Fixed").length,
       };
+    },
+  });
+
+  // ── Plan view — Pro/Business only ────────────────────────────────────────
+  const { data: planView, isLoading: planViewLoading } = useQuery({
+    queryKey: ["insights-plan-view", user?.id],
+    enabled: !!user && canUseFloorPlans,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data: plans, error: plansError } = await supabase
+        .from("floor_plans")
+        .select("id, name, image_url")
+        .order("created_at");
+      if (plansError) throw plansError;
+
+      const { data: pinned, error: snagsError } = await supabase
+        .from("snags")
+        .select("id, floor_plan_id, pin_x, pin_y, priority, location, status")
+        .not("floor_plan_id", "is", null)
+        .eq("status", "Open");
+      if (snagsError) throw snagsError;
+
+      const plansWithPins = await Promise.all(
+        plans.map(async (p) => ({
+          ...p,
+          thumbUrl: await getSignedUrl("floor-plans", p.image_url),
+          pins: pinned.filter((s) => s.floor_plan_id === p.id),
+        })),
+      );
+      return plansWithPins.filter((p) => p.pins.length > 0 || plans.length === 1);
     },
   });
 
@@ -495,6 +525,90 @@ function InsightsPage() {
           </div>
         ))}
       </div>
+
+      {/* Plan view — Pro/Business only */}
+      {!canUseFloorPlans ? (
+        <div className="rounded-2xl border-2 border-dashed bg-card p-8 text-center space-y-3">
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Lock className="h-6 w-6 text-primary" />
+          </div>
+          <h3 className="font-bold text-lg">{t("insights.planView.title")}</h3>
+          <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+            {t("insights.planView.lockedHint")}
+          </p>
+          <Button asChild className="rounded-xl font-bold mt-2">
+            <Link to="/billing">
+              <Zap className="h-4 w-4 mr-1" />
+              {t("insights.upgradeNow")}
+            </Link>
+          </Button>
+        </div>
+      ) : planViewLoading ? (
+        <Skeleton className="h-64 w-full rounded-2xl skeleton-shimmer" />
+      ) : planView && planView.length > 0 ? (
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-bold text-base">
+              {t("insights.planView.title")}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {t("insights.planView.subtitle")}
+            </p>
+          </div>
+          <div
+            className={`grid gap-4 ${planView.length > 1 ? "md:grid-cols-2" : ""}`}
+          >
+            {planView.map((p) => (
+              <div
+                key={p.id}
+                className="rounded-2xl border-2 bg-card p-4 card-machined shadow-sm space-y-2"
+              >
+                <p className="text-sm font-semibold">{p.name}</p>
+                <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-muted/30 border">
+                  {p.thumbUrl && (
+                    <img
+                      src={p.thumbUrl}
+                      alt={p.name}
+                      className="absolute inset-0 w-full h-full object-contain"
+                    />
+                  )}
+                  {p.pins.map((pin) => (
+                    <div
+                      key={pin.id}
+                      title={`${pin.priority ?? "Low"} — ${pin.location}`}
+                      className="absolute h-3.5 w-3.5 rounded-full border-2 border-white shadow -translate-x-1/2 -translate-y-1/2"
+                      style={{
+                        left: `${(pin.pin_x ?? 0) * 100}%`,
+                        top: `${(pin.pin_y ?? 0) * 100}%`,
+                        backgroundColor:
+                          PRIORITY_COLORS[pin.priority ?? "Low"],
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-3 pt-1">
+                  {Object.entries(PRIORITY_COLORS).map(([name, color]) => (
+                    <span
+                      key={name}
+                      className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border-2 border-dashed bg-card p-6 text-center text-sm text-muted-foreground">
+          {t("insights.planView.empty")}
+        </div>
+      )}
 
       {/* SLA gauge + site log — the gauge is the hero (deadline compliance is
           the number that actually drives the paid tiers); status/priority/

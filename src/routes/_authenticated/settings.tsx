@@ -14,6 +14,9 @@ import {
   CreditCard,
   Lock,
   Zap,
+  MapPin,
+  Trash2,
+  Plus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -28,7 +31,7 @@ import { toast } from "sonner";
 import { validateImageFile } from "@/lib/file-validation";
 import { compressImage } from "@/lib/image-compress";
 import { validatePassword } from "@/lib/password-policy";
-import { getLogoSignedUrl } from "@/lib/storage-url";
+import { getLogoSignedUrl, getSignedUrl } from "@/lib/storage-url";
 import { useTranslation } from "react-i18next";
 import { PlanCards } from "@/components/PlanCards";
 import { usePlanLimits } from "@/lib/usePlanLimits";
@@ -41,8 +44,8 @@ export const Route = createFileRoute("/_authenticated/settings")({
 type SettingsTab = "company" | "branding" | "billing" | "account";
 
 function SettingsPage() {
-  const { user, profile, refreshProfile } = useAuth();
-  const { canUseCustomBranding } = usePlanLimits();
+  const { user, profile, role, refreshProfile } = useAuth();
+  const { canUseCustomBranding, canUseFloorPlans } = usePlanLimits();
   const { t } = useTranslation();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -59,6 +62,9 @@ function SettingsPage() {
   const [pushNotif, setPushNotif] = useState(true);
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [newPlanName, setNewPlanName] = useState("");
+  const [planUploadBusy, setPlanUploadBusy] = useState(false);
+  const planFileRef = useRef<HTMLInputElement>(null);
 
   // Account tab — full name + password
   const [fullName, setFullName] = useState("");
@@ -139,6 +145,70 @@ function SettingsPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const { data: floorPlans } = useQuery({
+    queryKey: ["floor-plans", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("floor_plans")
+        .select("id, name, image_url")
+        .order("created_at");
+      if (error) throw error;
+      const withThumbs = await Promise.all(
+        data.map(async (p) => ({
+          ...p,
+          thumbUrl: await getSignedUrl("floor-plans", p.image_url),
+        })),
+      );
+      return withThumbs;
+    },
+  });
+
+  const uploadFloorPlan = async (file: File) => {
+    if (!user) return;
+    const result = await validateImageFile(file);
+    if (!result.valid) {
+      toast.error(result.error);
+      return;
+    }
+    setPlanUploadBusy(true);
+    try {
+      const compressed = await compressImage(file);
+      const path = `${user.id}/${crypto.randomUUID()}.jpg`;
+      const { error: upErr } = await supabase.storage
+        .from("floor-plans")
+        .upload(path, compressed);
+      if (upErr) throw upErr;
+      const { error: insErr } = await supabase.from("floor_plans").insert({
+        user_id: user.id,
+        name: newPlanName.trim() || t("settings.floorPlans.namePlaceholder"),
+        image_url: path,
+      });
+      if (insErr) throw insErr;
+      setNewPlanName("");
+      qc.invalidateQueries({ queryKey: ["floor-plans"] });
+      toast.success(t("settings.floorPlans.uploaded"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setPlanUploadBusy(false);
+    }
+  };
+
+  const deleteFloorPlan = async (planId: string) => {
+    if (!confirm(t("settings.floorPlans.deleteConfirm"))) return;
+    const { error } = await supabase
+      .from("floor_plans")
+      .delete()
+      .eq("id", planId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["floor-plans"] });
+    toast.success(t("settings.floorPlans.deleted"));
   };
 
   const save = async () => {
@@ -411,6 +481,122 @@ function SettingsPage() {
                 )}
               </Button>
             </div>
+          )}
+
+          {role === "manager" && (
+            <section className="rounded-2xl border-2 bg-card p-5 space-y-4 shadow-sm card-machined">
+              <div>
+                <h2 className="font-semibold text-lg flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  {t("settings.floorPlans.title")}
+                  {!canUseFloorPlans && (
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t("settings.floorPlans.subtitle")}
+                </p>
+              </div>
+
+              {!canUseFloorPlans ? (
+                <div className="rounded-2xl border-2 border-dashed bg-muted/30 p-4 flex items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    {t("settings.floorPlans.lockedHint")}
+                  </p>
+                  <Button
+                    asChild
+                    size="sm"
+                    className="rounded-xl font-bold shrink-0"
+                  >
+                    <Link to="/billing">
+                      <Zap className="h-3.5 w-3.5 mr-1" />
+                      {t("settings.upgrade")}
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {floorPlans && floorPlans.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {floorPlans.map((p) => (
+                        <div
+                          key={p.id}
+                          className="relative rounded-2xl border-2 border-border overflow-hidden bg-muted/30 group"
+                        >
+                          <div className="aspect-[4/3] w-full">
+                            {p.thumbUrl ? (
+                              <img
+                                src={p.thumbUrl}
+                                alt={p.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-white truncate">
+                              {p.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => deleteFloorPlan(p.id)}
+                              className="h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-red-600/80 transition-colors shrink-0"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {(!floorPlans || floorPlans.length === 0) && (
+                    <p className="text-sm text-muted-foreground py-2">
+                      {t("settings.floorPlans.empty")}
+                    </p>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Input
+                      value={newPlanName}
+                      onChange={(e) => setNewPlanName(e.target.value)}
+                      placeholder={t("settings.floorPlans.namePlaceholder")}
+                      className="h-11 rounded-2xl flex-1"
+                    />
+                    <input
+                      ref={planFileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadFloorPlan(file);
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={planUploadBusy}
+                      onClick={() => planFileRef.current?.click()}
+                      className="h-11 rounded-2xl font-medium shrink-0"
+                    >
+                      {planUploadBusy ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-1" />
+                          {t("settings.floorPlans.uploadCta")}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </section>
           )}
         </>
       )}

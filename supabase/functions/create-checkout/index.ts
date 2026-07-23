@@ -251,7 +251,7 @@ serve(async (req) => {
     //   no charge until then, and the trial length is never extended or reset.
     // - Trial already used up, or previously canceled: charge immediately, no
     //   second free trial.
-    // - Brand new, no trial history at all: standard 30-day trial.
+    // - Brand new, no trial history at all: standard 15-day trial.
     let subscriptionData: Record<string, unknown>;
     if (isMidTrial) {
       subscriptionData = {
@@ -263,7 +263,7 @@ serve(async (req) => {
       subscriptionData = { metadata: { supabase_user_id: user.id, plan } };
     } else {
       subscriptionData = {
-        trial_period_days: 30,
+        trial_period_days: 15,
         trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
         metadata: { supabase_user_id: user.id, plan },
       };

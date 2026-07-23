@@ -15,6 +15,7 @@ const PLAN_LIMITS: Record<
     namedComments: boolean; // role labels on comments
     emailFooter: boolean; // custom footer text on outgoing Resend emails
     customBranding: boolean; // brand theme picker (manager) + personal accent picker (team)
+    floorPlans: boolean; // upload floor plans + pin snags to an exact spot
   }
 > = {
   starter: {
@@ -26,6 +27,7 @@ const PLAN_LIMITS: Record<
     namedComments: false,
     emailFooter: false,
     customBranding: false,
+    floorPlans: false,
   },
   pro: {
     snags: 200,
@@ -36,6 +38,7 @@ const PLAN_LIMITS: Record<
     namedComments: true,
     emailFooter: false,
     customBranding: false,
+    floorPlans: true,
   },
   business: {
     snags: Infinity,
@@ -46,6 +49,7 @@ const PLAN_LIMITS: Record<
     namedComments: true,
     emailFooter: true,
     customBranding: true,
+    floorPlans: true,
   },
 };
 const FALLBACK = PLAN_LIMITS.starter;
@@ -132,5 +136,6 @@ export function usePlanLimits() {
     canUseNamedComments: limits.namedComments,
     canUseEmailFooter: limits.emailFooter,
     canUseCustomBranding: limits.customBranding,
+    canUseFloorPlans: limits.floorPlans,
   };
 }

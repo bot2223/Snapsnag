@@ -141,6 +141,17 @@
       "branding": "Branding",
       "billing": "Abrechnung",
       "account": "Konto"
+    },
+    "floorPlans": {
+      "title": "Grundrisse",
+      "subtitle": "Lade pro Etage einen Grundriss hoch, um Probleme genau zu markieren",
+      "uploadCta": "Grundriss hochladen",
+      "namePlaceholder": "z. B. Erdgeschoss",
+      "empty": "Noch keine Grundrisse",
+      "deleteConfirm": "Diesen Grundriss löschen? Bereits markierte Snags behalten ihre Stecknadel, aber das Bild ist weg.",
+      "uploaded": "Grundriss hochgeladen",
+      "deleted": "Grundriss gelöscht",
+      "lockedHint": "Upgrade auf Pro, um Grundrisse hochzuladen und Snags genau zu markieren."
     }
   },
   "team": {
@@ -431,6 +442,12 @@
       "Wednesday": "Wöchentlich (Mittwoch)",
       "Thursday": "Wöchentlich (Donnerstag)",
       "Friday": "Wöchentlich (Freitag)"
+    },
+    "planView": {
+      "title": "Planansicht",
+      "subtitle": "Alle offenen Snags auf ihrem Grundriss",
+      "empty": "Noch keine markierten Snags",
+      "lockedHint": "Upgrade auf Pro, um alle markierten Snags in einem Plan zu sehen."
     }
   },
   "subDashboard": {
@@ -494,5 +511,11 @@
       "joined": "Willkommen im Team!",
       "invalidLink": "Dieser Einladungslink ist ungültig oder abgelaufen."
     }
+  },
+  "floorPlan": {
+    "pinLocation": "Standort im Plan",
+    "clearPin": "Stecknadel entfernen",
+    "loading": "Plan wird geladen…",
+    "tapToPlace": "Tippen, wo das Problem ist"
   }
 }

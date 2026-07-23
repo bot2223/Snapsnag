@@ -34,6 +34,7 @@ import { compressImage } from "@/lib/image-compress";
 import { getSignedUrl } from "@/lib/storage-url";
 import { useTranslation } from "react-i18next";
 import { getLocalizedDescription } from "@/lib/snag-i18n";
+import { FloorPlanPinPicker } from "@/components/FloorPlanPinPicker";
 
 export const Route = createFileRoute("/_authenticated/snag/$id")({
   component: SnagDetail,
@@ -125,6 +126,20 @@ function SnagDetail() {
         getSignedUrl("snag-photos", data.resolution_photo_url),
       ]);
       return { ...data, photo_url, resolution_photo_url };
+    },
+  });
+
+  const { data: floorPlan } = useQuery({
+    queryKey: ["snag-floor-plan", snag?.floor_plan_id],
+    enabled: !!snag?.floor_plan_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("floor_plans")
+        .select("id, name, image_url")
+        .eq("id", snag!.floor_plan_id as string)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -470,6 +485,21 @@ function SnagDetail() {
           </span>
         </div>
       </div>
+
+      {floorPlan && (
+        <div className="mb-5">
+          <FloorPlanPinPicker
+            floorPlans={[floorPlan]}
+            value={{
+              floorPlanId: snag.floor_plan_id,
+              x: snag.pin_x,
+              y: snag.pin_y,
+            }}
+            onChange={() => {}}
+            interactive={false}
+          />
+        </div>
+      )}
 
       {/* Description */}
       <div className="mb-5">

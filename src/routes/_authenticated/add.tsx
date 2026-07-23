@@ -20,6 +20,7 @@ import { validateImageFile } from "@/lib/file-validation";
 import { compressImage } from "@/lib/image-compress";
 import { usePlanLimits } from "@/lib/usePlanLimits";
 import { LimitDialog } from "@/components/LimitDialog";
+import { FloorPlanPinPicker } from "@/components/FloorPlanPinPicker";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -58,7 +59,8 @@ function AddSnag() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { canAddSnag, snagLimit, snagCount } = usePlanLimits();
+  const { canAddSnag, snagLimit, snagCount, canUseFloorPlans } =
+    usePlanLimits();
   const [showLimit, setShowLimit] = useState(false);
 
   const [photo, setPhoto] = useState<File | null>(null);
@@ -74,6 +76,23 @@ function AddSnag() {
   const [aiRan, setAiRan] = useState(false);
   const [busy, setBusy] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
+  const [pin, setPin] = useState<{
+    floorPlanId: string | null;
+    x: number | null;
+    y: number | null;
+  }>({ floorPlanId: null, x: null, y: null });
+
+  const { data: floorPlans } = useQuery({
+    queryKey: ["floor-plans", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("floor_plans")
+        .select("id, name, image_url")
+        .order("created_at");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: subs } = useQuery({
     queryKey: ["subs", user?.id],
@@ -194,6 +213,9 @@ function AddSnag() {
         subcontractor_id: subId || null,
         priority: priority as (typeof PRIORITIES)[number],
         notes: notes || null,
+        floor_plan_id: pin.floorPlanId,
+        pin_x: pin.x,
+        pin_y: pin.y,
       });
       if (error) throw error;
       toast.success(t("add.toast.logged"));
@@ -279,6 +301,14 @@ function AddSnag() {
             className="h-12 rounded-2xl"
           />
         </div>
+
+        {canUseFloorPlans && floorPlans && floorPlans.length > 0 && (
+          <FloorPlanPinPicker
+            floorPlans={floorPlans}
+            value={pin}
+            onChange={setPin}
+          />
+        )}
 
         <div className="rounded-2xl border-2 bg-gradient-to-br from-primary/5 to-transparent p-4 space-y-3">
           <div className="flex items-start justify-between gap-3">

@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
  * Call this at render time to get a short-lived signed URL.
  */
 export async function getSignedUrl(
-  bucket: "snag-photos" | "company-assets" | "snag-reports",
+  bucket: "snag-photos" | "company-assets" | "snag-reports" | "floor-plans",
   path: string | null | undefined,
   expiresInSeconds = 3600,
 ): Promise<string | null> {

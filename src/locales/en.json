@@ -141,6 +141,17 @@
       "branding": "Branding",
       "billing": "Billing",
       "account": "Account"
+    },
+    "floorPlans": {
+      "title": "Floor plans",
+      "subtitle": "Upload a plan per level so issues can be pinned to an exact spot",
+      "uploadCta": "Upload a floor plan",
+      "namePlaceholder": "e.g. Ground floor",
+      "empty": "No floor plans yet",
+      "deleteConfirm": "Delete this floor plan? Snags already pinned to it will keep their pin but the plan image will be gone.",
+      "uploaded": "Floor plan uploaded",
+      "deleted": "Floor plan deleted",
+      "lockedHint": "Upgrade to Pro to upload floor plans and pin snags to an exact spot."
     }
   },
   "team": {
@@ -431,6 +442,12 @@
       "Wednesday": "Weekly (Wednesday)",
       "Thursday": "Weekly (Thursday)",
       "Friday": "Weekly (Friday)"
+    },
+    "planView": {
+      "title": "Plan view",
+      "subtitle": "All open snags plotted on their floor plan",
+      "empty": "No pinned snags yet",
+      "lockedHint": "Upgrade to Pro to see all your pinned snags on one plan."
     }
   },
   "subDashboard": {
@@ -494,5 +511,11 @@
       "joined": "Welcome to the team!",
       "invalidLink": "This invite link is invalid or has expired."
     }
+  },
+  "floorPlan": {
+    "pinLocation": "Location on plan",
+    "clearPin": "Clear pin",
+    "loading": "Loading plan…",
+    "tapToPlace": "Tap where the issue is"
   }
 }
