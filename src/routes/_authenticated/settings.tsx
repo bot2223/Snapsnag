@@ -30,6 +30,8 @@ import { withTimeout } from "@/lib/query-utils";
 import { toast } from "sonner";
 import { validateImageFile } from "@/lib/file-validation";
 import { compressImage, compressFloorPlanImage } from "@/lib/image-compress";
+import { FloorPlanZoneEditor } from "@/components/FloorPlanZoneEditor";
+import type { Zone } from "@/components/FloorPlanPinPicker";
 import { validatePassword } from "@/lib/password-policy";
 import { getLogoSignedUrl, getSignedUrl } from "@/lib/storage-url";
 import { useTranslation } from "react-i18next";
@@ -68,6 +70,9 @@ function SettingsPage() {
   const [pendingPlanPreviewUrl, setPendingPlanPreviewUrl] = useState<
     string | null
   >(null);
+  const [editingZonesPlanId, setEditingZonesPlanId] = useState<string | null>(
+    null,
+  );
   const planFileRef = useRef<HTMLInputElement>(null);
 
   // Account tab — full name + password
@@ -157,7 +162,7 @@ function SettingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("floor_plans")
-        .select("id, name, image_url")
+        .select("id, name, image_url, zones")
         .order("created_at");
       if (error) throw error;
       const withThumbs = await Promise.all(
@@ -553,17 +558,27 @@ function SettingsPage() {
                               </div>
                             )}
                           </div>
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex items-center justify-between">
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex items-center justify-between gap-1">
                             <span className="text-xs font-semibold text-white truncate">
                               {p.name}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => deleteFloorPlan(p.id)}
-                              className="h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-red-600/80 transition-colors shrink-0"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setEditingZonesPlanId(p.id)}
+                                title={t("settings.floorPlans.labelRooms")}
+                                className="h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-primary/80 transition-colors"
+                              >
+                                <MapPin className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteFloorPlan(p.id)}
+                                className="h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-red-600/80 transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -575,6 +590,26 @@ function SettingsPage() {
                       {t("settings.floorPlans.empty")}
                     </p>
                   )}
+
+                  {editingZonesPlanId &&
+                    floorPlans?.find((p) => p.id === editingZonesPlanId) && (
+                      <FloorPlanZoneEditor
+                        floorPlan={
+                          floorPlans.find(
+                            (p) => p.id === editingZonesPlanId,
+                          )! as unknown as {
+                            id: string;
+                            name: string;
+                            image_url: string;
+                            zones: Zone[];
+                          }
+                        }
+                        onClose={() => setEditingZonesPlanId(null)}
+                        onSaved={() =>
+                          qc.invalidateQueries({ queryKey: ["floor-plans"] })
+                        }
+                      />
+                    )}
 
                   {pendingPlanFile && pendingPlanPreviewUrl && (
                     <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-3 space-y-3">

@@ -21,6 +21,7 @@ import { compressImage } from "@/lib/image-compress";
 import { usePlanLimits } from "@/lib/usePlanLimits";
 import { LimitDialog } from "@/components/LimitDialog";
 import { FloorPlanPinPicker } from "@/components/FloorPlanPinPicker";
+import type { FloorPlan } from "@/components/FloorPlanPinPicker";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -66,6 +67,7 @@ function AddSnag() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [location, setLocation] = useState("");
+  const [locationAutoFilled, setLocationAutoFilled] = useState(false);
   const [category, setCategory] = useState<string>("");
   const [subId, setSubId] = useState<string>("");
   const [priority, setPriority] = useState<string>("Medium");
@@ -87,7 +89,7 @@ function AddSnag() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("floor_plans")
-        .select("id, name, image_url")
+        .select("id, name, image_url, zones")
         .order("created_at");
       if (error) throw error;
       return data;
@@ -296,7 +298,10 @@ function AddSnag() {
             id="loc"
             required
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            onChange={(e) => {
+              setLocation(e.target.value);
+              setLocationAutoFilled(false);
+            }}
             placeholder={t("add.locationPlaceholder")}
             className="h-12 rounded-2xl"
           />
@@ -304,9 +309,18 @@ function AddSnag() {
 
         {canUseFloorPlans && floorPlans && floorPlans.length > 0 && (
           <FloorPlanPinPicker
-            floorPlans={floorPlans}
+            floorPlans={floorPlans as unknown as FloorPlan[]}
             value={pin}
             onChange={setPin}
+            onZoneMatch={(name) => {
+              // Only overwrite Location if it's empty or we filled it
+              // ourselves last time — never clobber something the person
+              // actually typed.
+              if (name && (location === "" || locationAutoFilled)) {
+                setLocation(name);
+                setLocationAutoFilled(true);
+              }
+            }}
           />
         )}
 

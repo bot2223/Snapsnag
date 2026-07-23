@@ -154,7 +154,14 @@
       "lockedHint": "Upgrade auf Pro, um Grundrisse hochzuladen und Snags genau zu markieren.",
       "previewAlt": "Vorschau des ausgewählten Grundrisses",
       "confirmHint": "Bild und Etage prüfen, bevor du speicherst",
-      "confirmUpload": "Grundriss speichern"
+      "confirmUpload": "Grundriss speichern",
+      "labelRooms": "Räume benennen",
+      "zonesTitle": "Räume benennen — {{name}}",
+      "zonesHint": "Ziehe ein Rechteck um jeden Raum und benenne ihn. Wird ein Snag darin markiert, füllt sich der Standort automatisch aus.",
+      "zoneNamePlaceholder": "z. B. Hauptschlafzimmer",
+      "addZone": "Hinzufügen",
+      "zonesSaved": "Raumbezeichnungen gespeichert",
+      "saveZones": "Raumbezeichnungen speichern"
     }
   },
   "team": {

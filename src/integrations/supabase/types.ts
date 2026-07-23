@@ -70,6 +70,7 @@ export type Database = {
           image_url: string
           name: string
           user_id: string
+          zones: Json
         }
         Insert: {
           created_at?: string
@@ -77,6 +78,7 @@ export type Database = {
           image_url: string
           name: string
           user_id: string
+          zones?: Json
         }
         Update: {
           created_at?: string
@@ -84,6 +86,7 @@ export type Database = {
           image_url?: string
           name?: string
           user_id?: string
+          zones?: Json
         }
         Relationships: []
       }

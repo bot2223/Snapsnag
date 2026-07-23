@@ -10,9 +10,36 @@ import {
 import { getSignedUrl } from "@/lib/storage-url";
 import { useTranslation } from "react-i18next";
 
-export type FloorPlan = { id: string; name: string; image_url: string };
+export type Zone = {
+  id: string;
+  name: string;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+};
+
+export type FloorPlan = {
+  id: string;
+  name: string;
+  image_url: string;
+  zones?: Zone[];
+};
 
 type Pin = { floorPlanId: string | null; x: number | null; y: number | null };
+
+function findZone(zones: Zone[] | undefined, x: number, y: number) {
+  if (!zones) return null;
+  return (
+    zones.find(
+      (z) =>
+        x >= Math.min(z.x0, z.x1) &&
+        x <= Math.max(z.x0, z.x1) &&
+        y >= Math.min(z.y0, z.y1) &&
+        y <= Math.max(z.y0, z.y1),
+    ) ?? null
+  );
+}
 
 type Props = {
   floorPlans: FloorPlan[];
@@ -20,6 +47,8 @@ type Props = {
   onChange: (next: Pin) => void;
   /** Read-only preview (snag detail) vs interactive tap-to-place (log a snag). */
   interactive?: boolean;
+  /** Called with the matched zone's name (or null) whenever the pin moves. */
+  onZoneMatch?: (name: string | null) => void;
 };
 
 export function FloorPlanPinPicker({
@@ -27,6 +56,7 @@ export function FloorPlanPinPicker({
   value,
   onChange,
   interactive = true,
+  onZoneMatch,
 }: Props) {
   const { t } = useTranslation();
   const selectedPlan =
@@ -55,6 +85,7 @@ export function FloorPlanPinPicker({
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
     onChange({ floorPlanId: selectedPlan.id, x, y });
+    onZoneMatch?.(findZone(selectedPlan.zones, x, y)?.name ?? null);
   };
 
   const hasPin =
@@ -71,7 +102,10 @@ export function FloorPlanPinPicker({
         {hasPin && interactive && (
           <button
             type="button"
-            onClick={() => onChange({ floorPlanId: null, x: null, y: null })}
+            onClick={() => {
+              onChange({ floorPlanId: null, x: null, y: null });
+              onZoneMatch?.(null);
+            }}
             className="text-xs font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
           >
             <X className="h-3 w-3" />

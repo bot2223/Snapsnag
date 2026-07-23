@@ -154,7 +154,14 @@
       "lockedHint": "Upgrade to Pro to upload floor plans and pin snags to an exact spot.",
       "previewAlt": "Selected floor plan preview",
       "confirmHint": "Check it's the right image and level before saving",
-      "confirmUpload": "Save floor plan"
+      "confirmUpload": "Save floor plan",
+      "labelRooms": "Label rooms",
+      "zonesTitle": "Label rooms — {{name}}",
+      "zonesHint": "Drag a box around each room, name it. When a snag is pinned inside, Location fills in automatically.",
+      "zoneNamePlaceholder": "e.g. Master Bedroom",
+      "addZone": "Add",
+      "zonesSaved": "Room labels saved",
+      "saveZones": "Save room labels"
     }
   },
   "team": {
