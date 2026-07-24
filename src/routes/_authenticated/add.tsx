@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Camera, Loader2, Sparkles, X, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -24,6 +24,8 @@ import { FloorPlanPinPicker } from "@/components/FloorPlanPinPicker";
 import type { FloorPlan } from "@/components/FloorPlanPinPicker";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { OfflineQueueBanner } from "@/components/OfflineQueueBanner";
+import { enqueueSnag } from "@/lib/offline/queue";
 
 export const Route = createFileRoute("/_authenticated/add")({
   component: AddSnag,
@@ -78,6 +80,20 @@ function AddSnag() {
   const [aiRan, setAiRan] = useState(false);
   const [busy, setBusy] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
+  // Local, lightweight — just enough to gate the AI button and floor-plan
+  // picker (both need network) and branch submit(). The pending-queue
+  // banner below has its own richer hook for the sync engine itself.
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
   const [pin, setPin] = useState<{
     floorPlanId: string | null;
     x: number | null;
@@ -165,12 +181,72 @@ function AddSnag() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!canAddSnag) {
-      setShowLimit(true);
-      return;
-    }
     if (!category) {
       toast.error(t("add.toast.selectCategory"));
+      return;
+    }
+
+    const currentLang = i18n.language === "de" ? "de" : "en";
+    const originalForCurrentLang = currentLang === "de" ? aiDescDe : aiDescEn;
+    const wasEdited = aiRan && aiDesc !== originalForCurrentLang;
+    const description =
+      aiDesc ||
+      `${category} issue at ${location}.${notes ? " " + notes : ""}`;
+    // If the AI ran and the person didn't touch the text, keep both
+    // original language versions so each viewer reads it in their own
+    // language. If they edited it, that's now their intended wording —
+    // save it as-is for BOTH languages rather than showing a German
+    // viewer text an English speaker never actually approved.
+    const description_en = !aiRan ? null : wasEdited ? aiDesc : aiDescEn;
+    const description_de = !aiRan ? null : wasEdited ? aiDesc : aiDescDe;
+
+    if (!isOnline) {
+      // Floor plan pinning needs a signed URL fetch to even render the
+      // picker, so it's already hidden below while offline — pin is always
+      // empty here. No client-side limit check either: the server is the
+      // only source of truth for the monthly count (a teammate could use
+      // the last slot on this device's offline window), so this queues
+      // unconditionally and lets sync-time validation reject it honestly,
+      // with a reason, if it turns out not to fit.
+      await enqueueSnag({
+        userId: user.id,
+        photo,
+        payload: {
+          description,
+          description_en,
+          description_de,
+          location,
+          category,
+          priority,
+          subcontractor_id: subId || null,
+          notes: notes || null,
+          photoName: photo?.name ?? null,
+          photoType: photo?.type ?? null,
+        },
+      });
+      toast.success(t("add.toast.queuedOffline", "Captured — will sync when you're back online"));
+      // Reset the form in place rather than navigating away: this is the
+      // realistic field flow (several snags logged back-to-back offline),
+      // and staying here keeps the pending-sync banner visible as proof it
+      // was actually captured.
+      setPhoto(null);
+      setPhotoPreview(null);
+      setLocation("");
+      setLocationAutoFilled(false);
+      setCategory("");
+      setSubId("");
+      setPriority("Medium");
+      setNotes("");
+      setAiDesc("");
+      setAiDescEn(null);
+      setAiDescDe(null);
+      setAiRan(false);
+      setPin({ floorPlanId: null, x: null, y: null });
+      return;
+    }
+
+    if (!canAddSnag) {
+      setShowLimit(true);
       return;
     }
     setBusy(true);
@@ -191,19 +267,6 @@ function AddSnag() {
           photoUrl = path;
         }
       }
-      const description =
-        aiDesc ||
-        `${category} issue at ${location}.${notes ? " " + notes : ""}`;
-      // If the AI ran and the person didn't touch the text, keep both
-      // original language versions so each viewer reads it in their own
-      // language. If they edited it, that's now their intended wording —
-      // save it as-is for BOTH languages rather than showing a German
-      // viewer text an English speaker never actually approved.
-      const currentLang = i18n.language === "de" ? "de" : "en";
-      const originalForCurrentLang = currentLang === "de" ? aiDescDe : aiDescEn;
-      const wasEdited = aiRan && aiDesc !== originalForCurrentLang;
-      const description_en = !aiRan ? null : wasEdited ? aiDesc : aiDescEn;
-      const description_de = !aiRan ? null : wasEdited ? aiDesc : aiDescDe;
       const { error } = await supabase.from("snags").insert({
         user_id: user.id,
         photo_url: photoUrl,
@@ -241,6 +304,8 @@ function AddSnag() {
           </h1>
           <p className="text-sm text-muted-foreground">{t("add.subtitle")}</p>
         </div>
+
+        <OfflineQueueBanner />
 
         <div>
           <Label className="text-sm font-medium mb-2 block">
@@ -307,7 +372,7 @@ function AddSnag() {
           />
         </div>
 
-        {canUseFloorPlans && floorPlans && floorPlans.length > 0 && (
+        {canUseFloorPlans && floorPlans && floorPlans.length > 0 && isOnline && (
           <FloorPlanPinPicker
             floorPlans={floorPlans as unknown as FloorPlan[]}
             value={pin}
@@ -323,6 +388,17 @@ function AddSnag() {
             }}
           />
         )}
+        {canUseFloorPlans && floorPlans && floorPlans.length > 0 && !isOnline && (
+          // The picker needs a signed URL for the plan image, which can't
+          // be fetched offline. Showing it anyway would just be a dead
+          // spinner — say plainly that it's unavailable right now instead.
+          <p className="text-xs text-muted-foreground rounded-2xl border-2 border-dashed p-3">
+            {t(
+              "add.floorPlanOffline",
+              "Floor plan pinning needs a connection — add a text location for now.",
+            )}
+          </p>
+        )}
 
         <div className="rounded-2xl border-2 bg-gradient-to-br from-primary/5 to-transparent p-4 space-y-3">
           <div className="flex items-start justify-between gap-3">
@@ -333,7 +409,11 @@ function AddSnag() {
               <div>
                 <p className="font-semibold text-sm">{t("add.aiAnalysis")}</p>
                 <p className="text-xs text-muted-foreground">
-                  {aiRan ? t("add.aiSuggested") : t("add.aiHint")}
+                  {!isOnline
+                    ? t("add.aiOffline", "Needs a connection")
+                    : aiRan
+                      ? t("add.aiSuggested")
+                      : t("add.aiHint")}
                 </p>
               </div>
             </div>
@@ -347,7 +427,7 @@ function AddSnag() {
           <Button
             type="button"
             onClick={generateAI}
-            disabled={genBusy}
+            disabled={genBusy || !isOnline}
             variant="outline"
             className={`w-full h-11 rounded-2xl font-semibold transition-all ${genBusy ? "animate-pulse" : ""}`}
           >
@@ -492,6 +572,8 @@ function AddSnag() {
         >
           {busy ? (
             <Loader2 className="h-5 w-5 animate-spin" />
+          ) : !isOnline ? (
+            t("add.logSnagOffline", "Capture (will sync later)")
           ) : (
             t("add.logSnag")
           )}
