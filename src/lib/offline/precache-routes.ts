@@ -23,7 +23,7 @@ export async function precacheAllRoutes(): Promise<void> {
   if (!navigator.onLine) return; // nothing to fetch if we're already offline
 
   try {
-    const res = await fetch("/.vite/manifest.json");
+    const res = await fetch("/vite-manifest.json");
     if (!res.ok) return; // dev server / manifest not deployed — skip quietly
     const manifest: Record<string, ManifestChunk> = await res.json();
 
