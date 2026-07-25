@@ -1,16 +1,93 @@
 // SnapSnag service worker.
-// Scope is intentionally minimal: this only exists to (1) let the browser
-// treat the site as installable and (2) receive/display push notifications.
-// It does not do offline caching — adding that later is a separate,
-// deliberate decision (stale cached pages showing wrong snag data would be
-// worse than no offline support).
+// Scope: (1) lets the browser treat the site as installable, (2)
+// receives/displays push notifications, (3) caches the app shell (HTML +
+// built JS/CSS) so the app can actually open when there's no connection —
+// a cold offline load or an offline navbar reload previously hit the
+// browser's own ERR_INTERNET_DISCONNECTED page instead of the app.
+//
+// What's deliberately NOT cached: anything cross-origin. Supabase API
+// calls, storage signed URLs, and Google Fonts all bypass this file
+// entirely (see the origin check in the fetch handler below) — that's what
+// keeps this safe. The shell is just the JS bundle and static HTML; it
+// never contains snag data, so caching it can't show someone stale data,
+// only a stale app *version* until they're next online — which the
+// network-first strategy below minimizes anyway.
 
-self.addEventListener("install", () => {
-  self.skipWaiting();
+const SHELL_CACHE = "snapsnag-shell-v1";
+const PRECACHE_URLS = ["/", "/manifest.json", "/icon-192.png"];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(SHELL_CACHE)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .catch(() => {
+        // Install running offline itself (e.g. a re-registration attempt
+        // with no network) — nothing to precache yet, runtime caching
+        // below will fill this in on the next successful online visit.
+      })
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      // Drop caches from a previous SHELL_CACHE version so old bundles
+      // don't accumulate across deploys. Bump the version string above
+      // whenever a change needs a hard cache bust.
+      caches.keys().then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith("snapsnag-shell-") && key !== SHELL_CACHE)
+            .map((key) => caches.delete(key)),
+        ),
+      ),
+    ]),
+  );
+});
+
+// Deliberately narrow:
+//   - Same-origin GET only. Any cross-origin request (Supabase, storage,
+//     fonts) falls through untouched.
+//   - Navigations (full page loads / URL-bar reloads / navbar navigation):
+//     network-first, falling back to the cached shell when offline. This
+//     is what fixes the browser error page you'd otherwise see.
+//   - Built assets under /assets/ (Vite content-hashes these filenames):
+//     cache-first, since a given hash is either already correct forever
+//     or doesn't exist yet — never stale.
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  if (new URL(req.url).origin !== self.location.origin) return;
+
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(SHELL_CACHE).then((cache) => cache.put("/", copy));
+          return res;
+        })
+        .catch(() => caches.match("/").then((cached) => cached || caches.match(req))),
+    );
+    return;
+  }
+
+  if (new URL(req.url).pathname.startsWith("/assets/")) {
+    event.respondWith(
+      caches.match(req).then(
+        (cached) =>
+          cached ||
+          fetch(req).then((res) => {
+            const copy = res.clone();
+            caches.open(SHELL_CACHE).then((cache) => cache.put(req, copy));
+            return res;
+          }),
+      ),
+    );
+  }
 });
 
 // The edge function sends JSON: { title, body, url, icon? }
