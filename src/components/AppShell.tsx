@@ -78,7 +78,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         .select("logo_url, brand_color, brand_accent_color")
         .eq("user_id", user!.id)
         .maybeSingle();
-      if (error) return null;
+      if (error) throw error;
       return data;
     },
   });

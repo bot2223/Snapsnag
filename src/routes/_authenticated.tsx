@@ -44,14 +44,10 @@ function AuthLayout() {
     retry: false,
     staleTime: 60_000,
     queryFn: async () => {
-      try {
-        const { data, error } =
-          await supabase.functions.invoke("get-subscription");
-        if (error) return null; // fail silently — never block on edge function error
-        return data?.subscription ?? null;
-      } catch {
-        return null;
-      }
+      const { data, error } =
+        await supabase.functions.invoke("get-subscription");
+      if (error) throw error;
+      return data?.subscription ?? null;
     },
   });
 

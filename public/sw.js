@@ -5,16 +5,36 @@
 // a cold offline load or an offline navbar reload previously hit the
 // browser's own ERR_INTERNET_DISCONNECTED page instead of the app.
 //
-// What's deliberately NOT cached: anything cross-origin. Supabase API
-// calls, storage signed URLs, and Google Fonts all bypass this file
-// entirely (see the origin check in the fetch handler below) — that's what
-// keeps this safe. The shell is just the JS bundle and static HTML; it
-// never contains snag data, so caching it can't show someone stale data,
-// only a stale app *version* until they're next online — which the
+// What's deliberately NOT cached: anything else cross-origin. Supabase API
+// calls (the actual snag data, over postgrest/rpc) and Google Fonts bypass
+// this file entirely (see the origin check in the fetch handler below) —
+// that's what keeps this safe. The shell is just the JS bundle and static
+// HTML; it never contains snag data, so caching it can't show someone stale
+// data, only a stale app *version* until they're next online — which the
 // network-first strategy below minimizes anyway.
+//
+// Storage photo bytes are the one deliberate cross-origin exception, cached
+// separately below by stable storage path (see PHOTO_CACHE) since every
+// signed URL for the same photo is otherwise a different URL.
 
 const SHELL_CACHE = "snapsnag-shell-v1";
 const PRECACHE_URLS = ["/", "/manifest.json", "/icon-192.png"];
+const PHOTO_CACHE = "snapsnag-photos-v1";
+
+// Supabase signs storage URLs with a fresh token on every request
+// (getSignedUrl in storage-url.ts), so the same photo gets a different full
+// URL each time it's fetched — a plain cache-by-URL strategy would never hit
+// for a "new" signed URL even though the underlying image was already seen.
+// Stripping the query string (where the token lives) and keying on the
+// storage path instead means a photo viewed once while online stays visible
+// offline, however its signed URL changes later.
+function isStorageObjectRequest(url) {
+  return /\/storage\/v1\/object\/sign\//.test(url.pathname);
+}
+
+function storageCacheKey(url) {
+  return url.origin + url.pathname;
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -40,7 +60,11 @@ self.addEventListener("activate", (event) => {
       caches.keys().then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key.startsWith("snapsnag-shell-") && key !== SHELL_CACHE)
+            .filter(
+              (key) =>
+                (key.startsWith("snapsnag-shell-") && key !== SHELL_CACHE) ||
+                (key.startsWith("snapsnag-photos-") && key !== PHOTO_CACHE),
+            )
             .map((key) => caches.delete(key)),
         ),
       ),
@@ -60,7 +84,32 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
-  if (new URL(req.url).origin !== self.location.origin) return;
+  const url = new URL(req.url);
+
+  if (isStorageObjectRequest(url)) {
+    const key = storageCacheKey(url);
+    event.respondWith(
+      caches.open(PHOTO_CACHE).then(async (cache) => {
+        const cached = await cache.match(key);
+        if (cached) return cached;
+        try {
+          const res = await fetch(req);
+          // Only cache real image bytes — never cache an error response
+          // (expired/invalid token) under the stable key, or a later retry
+          // with a valid token would be stuck matching the cached failure.
+          if (res.ok) cache.put(key, res.clone());
+          return res;
+        } catch (err) {
+          // Offline and nothing cached yet for this photo — let it fail as
+          // a normal failed image load rather than an unhandled rejection.
+          throw err;
+        }
+      }),
+    );
+    return;
+  }
+
+  if (url.origin !== self.location.origin) return;
 
   if (req.mode === "navigate") {
     event.respondWith(
@@ -75,7 +124,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (new URL(req.url).pathname.startsWith("/assets/")) {
+  if (url.pathname.startsWith("/assets/")) {
     event.respondWith(
       caches.match(req).then(
         (cached) =>

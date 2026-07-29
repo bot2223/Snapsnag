@@ -55,6 +55,28 @@ const AuthContext = createContext<AuthContextValue>({
 export const PENDING_INVITE_KEY = "snapsnag_pending_invite";
 
 const ROLE_CACHE_KEY = "snapsnag_role_cache";
+const PROFILE_CACHE_KEY = "snapsnag_profile_cache";
+
+function readProfileCache(userId: string): Profile | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    if (!raw) return null;
+    const cache: Profile & { userId: string } = JSON.parse(raw);
+    if (cache.userId !== userId) return null;
+    return cache;
+  } catch {
+    return null;
+  }
+}
+
+function writeProfileCache(userId: string, profile: Profile) {
+  try {
+    localStorage.setItem(
+      PROFILE_CACHE_KEY,
+      JSON.stringify({ ...profile, userId }),
+    );
+  } catch {}
+}
 
 type RoleCache = {
   email: string;
@@ -87,6 +109,12 @@ function clearRoleCache() {
   } catch {}
 }
 
+function clearProfileCache() {
+  try {
+    localStorage.removeItem(PROFILE_CACHE_KEY);
+  } catch {}
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,15 +134,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function fetchProfile(user: User) {
     setProfileLoading(true);
+    // Show the last known profile immediately rather than a blank state —
+    // matters most right after a full-document reload (e.g. the offline
+    // shell fallback), where in-memory state starts fresh and the network
+    // fetch below may not be able to complete at all.
+    const cached = readProfileCache(user.id);
+    if (cached) setProfile(cached);
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, role, avatar_initials")
         .eq("id", user.id)
         .maybeSingle();
-      if (data) setProfile(data as Profile);
-      else setProfile(null);
+      if (error) {
+        // supabase-js resolves rather than rejects on a network failure —
+        // this branch is what actually catches "offline," not the catch
+        // block below. Keep showing the cached profile set above instead
+        // of treating "couldn't reach the server" the same as "confirmed
+        // no profile row," which is what kept wiping the cache out.
+        console.warn("fetchProfile failed:", error.message);
+      } else if (data) {
+        setProfile(data as Profile);
+        writeProfileCache(user.id, data as Profile);
+      } else {
+        // A genuine, error-free "no row" — trust it. Clears any stale
+        // cache from a since-deleted profile too.
+        setProfile(null);
+        clearProfileCache();
+      }
     } catch (err) {
+      // Belt-and-braces for the rarer case where the client does throw
+      // (e.g. an aborted request) — same reasoning as the error branch
+      // above: keep the cached profile rather than clearing it.
       console.warn("fetchProfile failed:", err);
     } finally {
       setProfileLoading(false);
@@ -164,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function resolveRole(user: User | null) {
     if (!user) {
       clearRoleCache();
+      clearProfileCache();
       applyRole(null, null, null);
       setProfile(null);
       setProfileLoading(false);
@@ -184,11 +236,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const timeout = setTimeout(() => controller.abort(), 4000);
     try {
       // Check profiles table first for site_worker role
-      const { data: prof } = await supabase
+      const { data: prof, error: profErr } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
+      if (profErr) throw profErr; // network failure — let the catch below handle it, don't fall through
 
       if (prof?.role === "site_worker") {
         clearTimeout(timeout);
@@ -203,11 +256,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Check subcontractors table
-      const { data: sub } = await supabase
+      const { data: sub, error: subErr } = await supabase
         .from("subcontractors")
         .select("id, name")
         .eq("email", user.email as string)
         .maybeSingle();
+      if (subErr) throw subErr;
 
       clearTimeout(timeout);
       const r: UserRole = sub ? "subcontractor" : "manager";
@@ -229,11 +283,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function refreshRoleInBackground(user: User) {
     try {
-      const { data: prof } = await supabase
+      const { data: prof, error: profErr } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
+      if (profErr) return; // e.g. offline — keep the cached role already applied, don't touch it
+
       if (prof?.role === "site_worker") {
         applyRole("site_worker", null, null);
         writeRoleCache({
@@ -244,11 +300,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
-      const { data: sub } = await supabase
+      const { data: sub, error: subErr } = await supabase
         .from("subcontractors")
         .select("id, name")
         .eq("email", user.email as string)
         .maybeSingle();
+      if (subErr) return;
+
       const r: UserRole = sub ? "subcontractor" : "manager";
       applyRole(r, sub?.id ?? null, sub?.name ?? null);
       writeRoleCache({
@@ -257,7 +315,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subcontractorId: sub?.id ?? null,
         subcontractorName: sub?.name ?? null,
       });
-    } catch {}
+    } catch {
+      // Same reasoning — a thrown network error should leave the already-
+      // applied cached role alone, not fall through to a "manager" default.
+    }
   }
 
   useEffect(() => {
@@ -285,6 +346,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       if (event === "SIGNED_OUT") {
         clearRoleCache();
+        clearProfileCache();
         applyRole(null, null, null);
         setProfile(null);
         setProfileLoading(false);

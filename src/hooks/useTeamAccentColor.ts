@@ -23,8 +23,7 @@ export function useTeamAccentColor(enabled: boolean) {
     retry: false,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_my_team_theme");
-      if (error)
-        return { unlocked: false, accent_color: null as string | null };
+      if (error) throw error;
       return data as { unlocked: boolean; accent_color: string | null };
     },
   });

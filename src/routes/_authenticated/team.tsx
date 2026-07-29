@@ -99,10 +99,11 @@ function ManageSheet({
     queryFn: async (): Promise<ActivityItem[]> => {
       if (member.kind === "subcontractor") {
         // Step 1: get snag IDs assigned to this subcontractor
-        const { data: snagRows } = await supabase
+        const { data: snagRows, error: snagRowsError } = await supabase
           .from("snags")
           .select("id, location")
           .eq("subcontractor_id", member.id);
+        if (snagRowsError) throw snagRowsError;
         const snagIds = (snagRows ?? []).map((s) => s.id);
         const locationMap: Record<string, string> = {};
         (snagRows ?? []).forEach((s) => {
@@ -112,12 +113,13 @@ function ManageSheet({
         if (snagIds.length === 0) return [];
 
         // Step 2: query activity for those snag IDs
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("snag_activity")
           .select("id, action, to_status, snag_id")
           .in("snag_id", snagIds)
           .order("created_at", { ascending: false })
           .limit(3);
+        if (error) throw error;
         return (data ?? []).map((a) => ({
           id: a.id,
           label:
@@ -576,17 +578,19 @@ function TeamPage() {
     staleTime: 30_000,
     queryFn: async (): Promise<TeamMember[]> => {
       // Fetch subcontractors
-      const { data: subs } = await supabase
+      const { data: subs, error: subsError } = await supabase
         .from("subcontractors")
         .select("id, name, email, phone, trade, auth_user_id")
         .order("name");
+      if (subsError) throw subsError;
 
       // Fetch site workers from profiles
-      const { data: workers } = await supabase
+      const { data: workers, error: workersError } = await supabase
         .from("profiles")
         .select("id, full_name, role, email")
         .eq("role", "site_worker")
         .order("full_name");
+      if (workersError) throw workersError;
 
       const result: TeamMember[] = [];
 
@@ -645,10 +649,11 @@ function TeamPage() {
       subcontractorCounts: Record<string, number>;
       workerCounts: Record<string, number>;
     }> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("snags")
         .select("subcontractor_id, user_id, manager_id")
         .neq("status", "Fixed");
+      if (error) throw error;
 
       const subcontractorCounts: Record<string, number> = {};
       const workerCounts: Record<string, number> = {};

@@ -48,7 +48,13 @@ export interface QueuedSnag {
 
 export type EnqueueInput = Omit<
   QueuedSnag,
-  "id" | "status" | "capturedAt" | "photoPath" | "lastError" | "attempts"
+  | "id"
+  | "status"
+  | "capturedAt"
+  | "photoPath"
+  | "lastError"
+  | "attempts"
+  | "photoBlob"
 > & {
   photo: File | null;
 };

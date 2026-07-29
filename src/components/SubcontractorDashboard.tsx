@@ -170,6 +170,12 @@ export function SubcontractorDashboard() {
           .neq("status", "Fixed")
           .lt("deadline_at", now),
       ]);
+      // See ManagerDashboard's equivalent query for why this matters: a
+      // network failure resolves here instead of throwing, and without this
+      // check an offline attempt "succeeds" with every count zeroed out,
+      // wiping the last good cached numbers instead of leaving them alone.
+      const firstError = openRes.error || resolvedRes.error || overdueRes.error;
+      if (firstError) throw firstError;
       return {
         open: openRes.count ?? 0,
         fixed: resolvedRes.count ?? 0,

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getQueuedSnags, updateQueuedSnag, removeQueuedSnag } from "./queue";
 import type { QueuedSnag } from "./types";
+import type { Database } from "@/integrations/supabase/types";
 
 const LOCK_NAME = "snapsnag-offline-sync";
 
@@ -73,9 +74,9 @@ async function insertRowIfNeeded(item: QueuedSnag, photoPath: string | null) {
       description_en: item.payload.description_en,
       description_de: item.payload.description_de,
       location: item.payload.location,
-      category: item.payload.category as never,
+      category: item.payload.category as Database["public"]["Enums"]["snag_category"],
       subcontractor_id: item.payload.subcontractor_id,
-      priority: item.payload.priority as never,
+      priority: item.payload.priority as Database["public"]["Enums"]["snag_priority"],
       notes: item.payload.notes,
       captured_at: item.capturedAt,
       // Floor plan pinning is out of scope for offline v1 (see sync engine

@@ -132,6 +132,18 @@ export function ManagerDashboard() {
             .eq("status", "Fixed")
             .not("deadline_at", "is", null),
         ]);
+      // Supabase resolves (rather than rejects) on a network failure — each
+      // of these comes back as { count: null, error } / { data: null, error }
+      // instead of throwing. Without this check, an offline attempt "succeeds"
+      // with every count defaulted to 0 below, and that all-zero result then
+      // overwrites the last good cached KPIs instead of leaving them alone.
+      const firstError =
+        openRes.error ||
+        resolvedRes.error ||
+        criticalRes.error ||
+        totalRes.error ||
+        resolvedSnagsRes.error;
+      if (firstError) throw firstError;
       const open = openRes.count ?? 0;
       const resolved = resolvedRes.count ?? 0;
       const total = totalRes.count ?? 0;
@@ -144,12 +156,14 @@ export function ManagerDashboard() {
       let lateOrUnknown = 0;
       if (resolvedWithDeadline.length > 0) {
         const ids = resolvedWithDeadline.map((s) => s.id);
-        const { data: resolveEvents } = await supabase
-          .from("snag_activity")
-          .select("snag_id, created_at")
-          .in("snag_id", ids)
-          .eq("to_status", "Fixed")
-          .order("created_at", { ascending: false });
+        const { data: resolveEvents, error: resolveEventsError } =
+          await supabase
+            .from("snag_activity")
+            .select("snag_id, created_at")
+            .in("snag_id", ids)
+            .eq("to_status", "Fixed")
+            .order("created_at", { ascending: false });
+        if (resolveEventsError) throw resolveEventsError;
 
         // Keep only the most recent "resolved" event per snag, in case it
         // was reopened and resolved again.

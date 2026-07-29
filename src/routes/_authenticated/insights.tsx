@@ -248,11 +248,12 @@ function InsightsPage() {
     enabled: !!user && isPro,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("report_schedules")
         .select("*")
         .eq("user_id", user!.id)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
   });
@@ -263,12 +264,13 @@ function InsightsPage() {
     enabled: !!user && isPro,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("snag_reports")
         .select("*")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(5);
+      if (error) throw error;
       return data ?? [];
     },
   });

@@ -67,14 +67,19 @@ export function usePlanLimits() {
     retry: false,
     staleTime: 60_000,
     queryFn: async () => {
-      try {
-        const { data, error } =
-          await supabase.functions.invoke("get-subscription");
-        if (error) return null;
-        return data?.subscription ?? null;
-      } catch {
-        return null;
-      }
+      const { data, error } =
+        await supabase.functions.invoke("get-subscription");
+      // Throwing here (rather than resolving with null) means react-query
+      // treats a network failure as a failed fetch and keeps showing the
+      // last successful plan instead of quietly downgrading everyone to
+      // Starter limits the moment they go offline — and, since that's now
+      // persisted (see __root.tsx), permanently overwriting the real plan
+      // in the cache too. A genuinely new user with no successful fetch yet
+      // still falls through to the FALLBACK (Starter) below exactly as
+      // before, since `subscription` simply stays undefined until one
+      // succeeds.
+      if (error) throw error;
+      return data?.subscription ?? null;
     },
   });
 
@@ -92,7 +97,8 @@ export function usePlanLimits() {
         .select("*", { count: "exact", head: true })
         .eq("user_id", user!.id)
         .gte("created_at", start.toISOString());
-      return error ? 0 : (count ?? 0);
+      if (error) throw error;
+      return count ?? 0;
     },
   });
 
@@ -111,6 +117,9 @@ export function usePlanLimits() {
           .select("*", { count: "exact", head: true })
           .eq("role", "site_worker"),
       ]);
+      if (subRes.error || workerRes.error) {
+        throw subRes.error || workerRes.error;
+      }
       return (subRes.count ?? 0) + (workerRes.count ?? 0);
     },
   });

@@ -406,6 +406,7 @@ export type Database = {
       snags: {
         Row: {
           category: Database["public"]["Enums"]["snag_category"]
+          captured_at: string | null
           created_at: string | null
           deadline_at: string | null
           description: string
@@ -430,6 +431,7 @@ export type Database = {
         }
         Insert: {
           category: Database["public"]["Enums"]["snag_category"]
+          captured_at?: string | null
           created_at?: string | null
           deadline_at?: string | null
           description: string
@@ -454,6 +456,7 @@ export type Database = {
         }
         Update: {
           category?: Database["public"]["Enums"]["snag_category"]
+          captured_at?: string | null
           created_at?: string | null
           deadline_at?: string | null
           description?: string

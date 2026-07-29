@@ -1,4 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -10,6 +12,16 @@ import { AuthProvider } from "@/lib/auth-context";
 import { I18nextProvider, useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
+
+// Sync (localStorage) rather than the IndexedDB persister on purpose: it's
+// small text (snag lists, insights numbers, signed photo URLs — never the
+// photo bytes themselves), and a synchronous persister can flush on the
+// 'pagehide' fired right before the service worker swaps in the cached
+// shell, where an async IndexedDB write could get cut off mid-write.
+const persister = createSyncStoragePersister({
+  storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  key: "snapsnag-query-cache",
+});
 
 function NotFoundComponent() {
   const { t } = useTranslation();
@@ -112,12 +124,25 @@ function RootComponent() {
 
   return (
     <I18nextProvider i18n={i18n}>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister,
+          maxAge: 24 * 60 * 60 * 1000, // 24h — matches queryClient's gcTime
+          // Photo signed URLs are time-limited (see storage-url.ts); if one
+          // expired while the device was offline, restoring it just means a
+          // broken image `src` until the query naturally refetches once back
+          // online — never a hard failure, so don't bother filtering it out.
+          dehydrateOptions: {
+            shouldDehydrateQuery: (query) => query.state.status === "success",
+          },
+        }}
+      >
         <AuthProvider>
           <Outlet />
           <Toaster />
         </AuthProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </I18nextProvider>
   );
 }
