@@ -47,6 +47,7 @@
     "recentSnags": "Aktuelle Mängel",
     "newSnag": "Neuer Mangel",
     "errorLoading": "Fehler beim Laden der Mängel. Bitte versuchen Sie es erneut.",
+    "showingSavedData": "Gespeicherte Daten werden angezeigt — Aktualisierung erfolgt, sobald Sie wieder online sind.",
     "fixed": "Behoben"
   },
   "login": {

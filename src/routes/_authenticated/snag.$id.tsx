@@ -193,31 +193,16 @@ function SnagDetail() {
     },
   });
 
-  const { data: activityCount } = useQuery({
-    queryKey: ["snag-activity-count", id],
-    enabled: isManager && canUseActivityLog,
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("snag_activity")
-        .select("*", { count: "exact", head: true })
-        .eq("snag_id", id);
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
-
-  const { data: activity } = useQuery({
-    queryKey: ["snag-activity", id, activityPage],
+  const { data: activityAll } = useQuery({
+    queryKey: ["snag-activity", id],
     // Only managers on Pro/Business can see the activity log
     enabled: isManager && canUseActivityLog,
     queryFn: async () => {
-      const from = activityPage * ACTIVITY_PAGE_SIZE;
       const { data, error } = await supabase
         .from("snag_activity")
         .select("*")
         .eq("snag_id", id)
-        .order("created_at", { ascending: false })
-        .range(from, from + ACTIVITY_PAGE_SIZE - 1);
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -225,7 +210,11 @@ function SnagDetail() {
 
   const activityTotalPages = Math.max(
     1,
-    Math.ceil((activityCount ?? 0) / ACTIVITY_PAGE_SIZE),
+    Math.ceil((activityAll?.length ?? 0) / ACTIVITY_PAGE_SIZE),
+  );
+  const activity = (activityAll ?? []).slice(
+    activityPage * ACTIVITY_PAGE_SIZE,
+    activityPage * ACTIVITY_PAGE_SIZE + ACTIVITY_PAGE_SIZE,
   );
   useEffect(() => {
     if (activityPage > activityTotalPages - 1)

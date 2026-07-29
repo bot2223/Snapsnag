@@ -3,6 +3,20 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { getRouter } from "./router";
 import "./lib/i18n";
+// Self-hosted fonts (same weights previously pulled live from
+// fonts.googleapis.com/fonts.gstatic.com) — bundled as ordinary same-origin
+// assets so the service worker's existing /assets/ caching covers them for
+// free. A cross-origin Google Fonts request has no chance offline: the app
+// shell itself is served from cache, but the CSS-then-font-file request to
+// Google's CDN just fails, and the browser silently falls back to a system
+// font instead — an easy thing to miss since nothing actually errors, the
+// page just looks subtly (or not so subtly) different.
+import "@fontsource/barlow/400.css";
+import "@fontsource/barlow/500.css";
+import "@fontsource/barlow/600.css";
+import "@fontsource/barlow-condensed/600.css";
+import "@fontsource/barlow-condensed/700.css";
+import "@fontsource/barlow-condensed/800.css";
 import "./styles.css";
 import { precacheAllRoutes } from "./lib/offline/precache-routes";
 

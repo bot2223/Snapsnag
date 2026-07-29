@@ -47,6 +47,7 @@
     "recentSnags": "Recent Snags",
     "newSnag": "New Snag",
     "errorLoading": "Error loading snags. Please try again.",
+    "showingSavedData": "Showing saved data — will refresh once you're back online.",
     "fixed": "Fixed"
   },
   "login": {

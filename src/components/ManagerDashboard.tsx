@@ -11,6 +11,7 @@ import {
   ArrowRightLeft,
   ChevronRight,
   Lock,
+  CloudOff,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -204,38 +205,31 @@ export function ManagerDashboard() {
     },
   });
 
-  // Audit trail is paginated server-side (5 rows/page) rather than capped —
-  // total count drives the page-number strip, actual rows come from the
-  // ranged query below keyed on the current page.
+  // Audit trail — paginated client-side (5 rows/page) over a single capped
+  // fetch, the same pattern as the SLA Countdown list above, rather than a
+  // fresh server-ranged query per page. That used to mean page 1 loaded fine
+  // offline (it's whatever was cached on the last visit) while page 2+ had
+  // never been fetched and came back empty/erroring the moment you were
+  // offline and clicked "next" — same class of problem the KPI counts had.
+  // 200 rows is a generous window for "recent activity" and matches the
+  // 100-snag cap used elsewhere for the same reason: bounded network/cache
+  // footprint, and everything within the window works offline once loaded.
   const ACTIVITY_PAGE_SIZE = 5;
+  const ACTIVITY_WINDOW = 200;
   const [activityPage, setActivityPage] = useState(0);
 
-  const { data: activityCount } = useQuery({
-    queryKey: ["snag-activity-count", user?.id],
+  const { data: activityAll, isLoading: activityLoading } = useQuery({
+    queryKey: ["snag-activity-feed", user?.id],
     retry: false,
     staleTime: 15_000,
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("snag_activity")
-        .select("*", { count: "exact", head: true });
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
-
-  const { data: activity, isLoading: activityLoading } = useQuery({
-    queryKey: ["snag-activity-feed", user?.id, activityPage],
-    retry: false,
-    staleTime: 15_000,
-    queryFn: async () => {
-      const from = activityPage * ACTIVITY_PAGE_SIZE;
       const { data, error } = await supabase
         .from("snag_activity")
         .select(
           "id, action, from_status, to_status, created_at, actor_name, snags(id, location, category)",
         )
         .order("created_at", { ascending: false })
-        .range(from, from + ACTIVITY_PAGE_SIZE - 1);
+        .limit(ACTIVITY_WINDOW);
       if (error) throw error;
       return data as unknown as ActivityEntry[];
     },
@@ -243,7 +237,11 @@ export function ManagerDashboard() {
 
   const activityTotalPages = Math.max(
     1,
-    Math.ceil((activityCount ?? 0) / ACTIVITY_PAGE_SIZE),
+    Math.ceil((activityAll?.length ?? 0) / ACTIVITY_PAGE_SIZE),
+  );
+  const activity = (activityAll ?? []).slice(
+    activityPage * ACTIVITY_PAGE_SIZE,
+    activityPage * ACTIVITY_PAGE_SIZE + ACTIVITY_PAGE_SIZE,
   );
   useEffect(() => {
     if (activityPage > activityTotalPages - 1)
@@ -425,9 +423,15 @@ export function ManagerDashboard() {
         </Link>
       </div>
 
-      {isError && (
+      {isError && !data && (
         <div className="rounded-2xl border-dashed border-2 p-8 text-center text-muted-foreground text-sm">
           {t("dashboard.errorLoading")}
+        </div>
+      )}
+      {isError && data && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <CloudOff className="h-3.5 w-3.5 shrink-0" />
+          {t("dashboard.showingSavedData")}
         </div>
       )}
 
