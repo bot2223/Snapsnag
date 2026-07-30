@@ -14,6 +14,7 @@ import {
   Bell,
 } from "lucide-react";
 import type { ReactNode, CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,11 +26,9 @@ import { getLogoSignedUrl } from "@/lib/storage-url";
 import { usePlanLimits } from "@/lib/usePlanLimits";
 import { findBrandPreset } from "@/lib/brand-presets";
 import { Button } from "@/components/ui/button";
-import { useIsOnline } from "@/hooks/useIsOnline";
 
 function EnablePushBanner({ userId }: { userId: string }) {
   const { t } = useTranslation();
-  const isOnline = useIsOnline();
   const { supported, permission, subscribed, loading, subscribe } =
     usePushSubscription({
       table: "manager_push_subscriptions",
@@ -49,12 +48,7 @@ function EnablePushBanner({ userId }: { userId: string }) {
         <p className="text-xs text-muted-foreground flex-1">
           {t("push.enableHintManager")}
         </p>
-        <Button
-          size="sm"
-          disabled={loading || !isOnline}
-          title={!isOnline ? t("offline.requiresInternet") : undefined}
-          onClick={() => subscribe()}
-        >
+        <Button size="sm" disabled={loading} onClick={() => subscribe()}>
           {loading ? t("push.enabling") : t("push.enable")}
         </Button>
       </div>
@@ -104,7 +98,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       } as CSSProperties)
     : undefined;
 
-  const logoDisplayUrl = navBranding?.logoSignedUrl ?? null;
+  const [logoDisplayUrl, setLogoDisplayUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    getLogoSignedUrl(logoPath).then((url) => {
+      if (active) setLogoDisplayUrl(url);
+    });
+    return () => {
+      active = false;
+    };
+  }, [logoPath]);
 
   const toggleLanguage = () => {
     const next = i18n.language === "en" ? "de" : "en";

@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getSignedUrl } from "@/lib/storage-url";
+import { getSignedUrlCached } from "@/lib/storage-url";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { Zone } from "@/components/FloorPlanPinPicker";
+import { useIsOnline } from "@/hooks/useIsOnline";
 
 type Props = {
   floorPlan: { id: string; name: string; image_url: string; zones: Zone[] };
@@ -18,6 +19,7 @@ type Draft = { x0: number; y0: number; x1: number; y1: number };
 
 export function FloorPlanZoneEditor({ floorPlan, onClose, onSaved }: Props) {
   const { t } = useTranslation();
+  const isOnline = useIsOnline();
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [zones, setZones] = useState<Zone[]>(floorPlan.zones ?? []);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -26,7 +28,7 @@ export function FloorPlanZoneEditor({ floorPlan, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    getSignedUrl("floor-plans", floorPlan.image_url).then(setImgUrl);
+    getSignedUrlCached("floor-plans", floorPlan.image_url).then(setImgUrl);
   }, [floorPlan.image_url]);
 
   const posFromEvent = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -208,7 +210,8 @@ export function FloorPlanZoneEditor({ floorPlan, onClose, onSaved }: Props) {
       <Button
         type="button"
         onClick={save}
-        disabled={saving}
+        disabled={saving || !isOnline}
+        title={!isOnline ? t("offline.requiresInternet") : undefined}
         className="w-full h-11 rounded-2xl font-semibold"
       >
         {t("settings.floorPlans.saveZones")}

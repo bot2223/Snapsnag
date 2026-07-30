@@ -35,7 +35,6 @@ import { getSignedUrl } from "@/lib/storage-url";
 import { useTranslation } from "react-i18next";
 import { getLocalizedDescription } from "@/lib/snag-i18n";
 import { FloorPlanPinPicker } from "@/components/FloorPlanPinPicker";
-import { useIsOnline } from "@/hooks/useIsOnline";
 
 export const Route = createFileRoute("/_authenticated/snag/$id")({
   component: SnagDetail,
@@ -101,7 +100,6 @@ function SnagDetail() {
   const [activityPage, setActivityPage] = useState(0);
 
   const qc = useQueryClient();
-  const isOnline = useIsOnline();
   const [comment, setComment] = useState("");
   const [showFixModal, setShowFixModal] = useState(false);
   const [resPhoto, setResPhoto] = useState<File | null>(null);
@@ -521,12 +519,9 @@ function SnagDetail() {
               onValueChange={(v) =>
                 reassignSub(v === UNASSIGNED_VALUE ? null : v)
               }
-              disabled={assignBusy || !isOnline}
+              disabled={assignBusy}
             >
-              <SelectTrigger
-                className="w-40 h-9 rounded-xl"
-                title={!isOnline ? t("offline.requiresInternet") : undefined}
-              >
+              <SelectTrigger className="w-40 h-9 rounded-xl">
                 {assignBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -585,12 +580,9 @@ function SnagDetail() {
             <Select
               value={snag.status ?? ""}
               onValueChange={(v) => updateStatus(v as "Open" | "Fixed")}
-              disabled={statusBusy || !isOnline}
+              disabled={statusBusy}
             >
-              <SelectTrigger
-                className="w-40 h-9 rounded-xl"
-                title={!isOnline ? t("offline.requiresInternet") : undefined}
-              >
+              <SelectTrigger className="w-40 h-9 rounded-xl">
                 {statusBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -619,8 +611,7 @@ function SnagDetail() {
         (canUseResolutionPhotos ? (
           <Button
             onClick={() => setShowFixModal(true)}
-            disabled={statusBusy || !isOnline}
-            title={!isOnline ? t("offline.requiresInternet") : undefined}
+            disabled={statusBusy}
             className="w-full h-14 text-base font-bold bg-green-600 hover:bg-green-700 text-white rounded-2xl transition-all duration-150 active:scale-[0.98] mb-5"
           >
             <CheckCircle2 className="h-5 w-5 mr-2" />
@@ -630,8 +621,7 @@ function SnagDetail() {
           // Starter — still let them mark fixed via status dropdown, just no photo proof
           <Button
             onClick={() => updateStatus("Fixed")}
-            disabled={statusBusy || !isOnline}
-            title={!isOnline ? t("offline.requiresInternet") : undefined}
+            disabled={statusBusy}
             className="w-full h-14 text-base font-bold bg-green-600 hover:bg-green-700 text-white rounded-2xl transition-all duration-150 active:scale-[0.98] mb-5"
           >
             <CheckCircle2 className="h-5 w-5 mr-2" />
@@ -643,8 +633,7 @@ function SnagDetail() {
       {snag.status !== "Fixed" && isSubcontractor && (
         <Button
           onClick={() => setShowFixModal(true)}
-          disabled={statusBusy || !isOnline}
-          title={!isOnline ? t("offline.requiresInternet") : undefined}
+          disabled={statusBusy}
           className="w-full h-14 text-base font-bold bg-green-600 hover:bg-green-700 text-white rounded-2xl transition-all duration-150 active:scale-[0.98] mb-5"
         >
           <CheckCircle2 className="h-5 w-5 mr-2" />
@@ -741,8 +730,7 @@ function SnagDetail() {
                 variant="outline"
                 className="flex-1 h-12 rounded-2xl"
                 onClick={() => markAsFixed(true)}
-                disabled={fixBusy || !isOnline}
-                title={!isOnline ? t("offline.requiresInternet") : undefined}
+                disabled={fixBusy}
               >
                 {fixBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -753,8 +741,7 @@ function SnagDetail() {
               <Button
                 className="flex-1 h-12 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold"
                 onClick={() => markAsFixed(false)}
-                disabled={fixBusy || !isOnline}
-                title={!isOnline ? t("offline.requiresInternet") : undefined}
+                disabled={fixBusy}
               >
                 {fixBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -856,8 +843,7 @@ function SnagDetail() {
           />
           <Button
             type="submit"
-            disabled={commentBusy || !comment.trim() || !isOnline}
-            title={!isOnline ? t("offline.requiresInternet") : undefined}
+            disabled={commentBusy || !comment.trim()}
             size="icon"
             className="h-auto w-12 shrink-0 rounded-2xl"
           >

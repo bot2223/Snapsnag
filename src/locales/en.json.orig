@@ -1,7 +1,4 @@
 {
-  "offline": {
-    "requiresInternet": "Requires an internet connection"
-  },
   "nav": {
     "snags": "Snags",
     "add": "Add",

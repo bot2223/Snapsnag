@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useIsOnline } from "@/hooks/useIsOnline";
 
 export type PlanId = "starter" | "pro" | "business";
 
@@ -192,6 +193,7 @@ export function PlanCards() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const isOnline = useIsOnline();
   const [checkoutBusy, setCheckoutBusy] = useState<PlanId | null>(null);
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -391,7 +393,8 @@ export function PlanCards() {
                   size="sm"
                   className="h-7 shrink-0 text-xs"
                   onClick={cancelScheduledDowngrade}
-                  disabled={cancelDowngradeBusy}
+                  disabled={cancelDowngradeBusy || !isOnline}
+                  title={!isOnline ? t("offline.requiresInternet") : undefined}
                 >
                   {cancelDowngradeBusy ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -518,7 +521,13 @@ export function PlanCards() {
                               }
                               disabled={
                                 !!checkoutBusy ||
-                                subscription?.pending_plan === id
+                                subscription?.pending_plan === id ||
+                                !isOnline
+                              }
+                              title={
+                                !isOnline
+                                  ? t("offline.requiresInternet")
+                                  : undefined
                               }
                             >
                               {checkoutBusy === id ? (
@@ -633,7 +642,10 @@ export function PlanCards() {
                             ? setDowngradeTarget(id)
                             : startCheckout(id)
                         }
-                        disabled={!!checkoutBusy || isScheduled}
+                        disabled={!!checkoutBusy || isScheduled || !isOnline}
+                        title={
+                          !isOnline ? t("offline.requiresInternet") : undefined
+                        }
                       >
                         {buttonLabel ?? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -664,7 +676,8 @@ export function PlanCards() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={cancelSubscription}
-              disabled={cancelBusy}
+              disabled={cancelBusy || !isOnline}
+              title={!isOnline ? t("offline.requiresInternet") : undefined}
             >
               {cancelBusy ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -698,7 +711,8 @@ export function PlanCards() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => downgradeTarget && startCheckout(downgradeTarget)}
-              disabled={!!checkoutBusy}
+              disabled={!!checkoutBusy || !isOnline}
+              title={!isOnline ? t("offline.requiresInternet") : undefined}
             >
               {checkoutBusy === downgradeTarget ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

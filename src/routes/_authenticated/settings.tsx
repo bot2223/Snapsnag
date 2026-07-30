@@ -38,6 +38,7 @@ import { useTranslation } from "react-i18next";
 import { PlanCards } from "@/components/PlanCards";
 import { usePlanLimits } from "@/lib/usePlanLimits";
 import { BRAND_PRESETS, findBrandPreset } from "@/lib/brand-presets";
+import { useIsOnline } from "@/hooks/useIsOnline";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -50,6 +51,7 @@ function SettingsPage() {
   const { canUseCustomBranding, canUseFloorPlans } = usePlanLimits();
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const isOnline = useIsOnline();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [tab, setTab] = useState<SettingsTab>("company");
@@ -493,7 +495,8 @@ function SettingsPage() {
               )}
               <Button
                 onClick={save}
-                disabled={busy}
+                disabled={busy || !isOnline}
+                title={!isOnline ? t("offline.requiresInternet") : undefined}
                 className="flex-1 h-12 font-semibold rounded-2xl"
               >
                 {busy ? (
@@ -574,7 +577,13 @@ function SettingsPage() {
                               <button
                                 type="button"
                                 onClick={() => deleteFloorPlan(p.id)}
-                                className="h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-red-600/80 transition-colors"
+                                disabled={!isOnline}
+                                title={
+                                  !isOnline
+                                    ? t("offline.requiresInternet")
+                                    : undefined
+                                }
+                                className="h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-red-600/80 transition-colors disabled:opacity-50"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -635,7 +644,12 @@ function SettingsPage() {
                         </Button>
                         <Button
                           type="button"
-                          disabled={planUploadBusy}
+                          disabled={planUploadBusy || !isOnline}
+                          title={
+                            !isOnline
+                              ? t("offline.requiresInternet")
+                              : undefined
+                          }
                           onClick={confirmUploadFloorPlan}
                           className="flex-1 h-10 rounded-xl font-semibold"
                         >
@@ -741,7 +755,8 @@ function SettingsPage() {
                       e.stopPropagation();
                       fileRef.current?.click();
                     }}
-                    disabled={busy}
+                    disabled={busy || !isOnline}
+                title={!isOnline ? t("offline.requiresInternet") : undefined}
                     className="rounded-2xl"
                   >
                     <Upload className="h-4 w-4 mr-1" />{" "}
@@ -861,7 +876,8 @@ function SettingsPage() {
               )}
               <Button
                 onClick={save}
-                disabled={busy}
+                disabled={busy || !isOnline}
+                title={!isOnline ? t("offline.requiresInternet") : undefined}
                 className="flex-1 h-12 font-semibold rounded-2xl"
               >
                 {busy ? (
@@ -922,7 +938,8 @@ function SettingsPage() {
             <div className="flex gap-3">
               <Button
                 onClick={updateAccount}
-                disabled={accountBusy}
+                disabled={accountBusy || !isOnline}
+                title={!isOnline ? t("offline.requiresInternet") : undefined}
                 className="flex-1 h-12 font-semibold rounded-2xl"
               >
                 {accountBusy ? (
@@ -964,7 +981,8 @@ function SettingsPage() {
             </div>
             <Button
               onClick={save}
-              disabled={busy}
+              disabled={busy || !isOnline}
+                title={!isOnline ? t("offline.requiresInternet") : undefined}
               className="w-full h-11 font-semibold rounded-2xl"
             >
               {busy ? (
