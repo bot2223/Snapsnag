@@ -111,7 +111,7 @@ function LoginPage() {
       <div className="fixed top-6 right-6 z-50 flex items-center gap-2">
         <button
           onClick={toggleLanguage}
-          aria-label="Toggle language"
+          aria-label={t("common.toggleLanguage")}
           className="h-10 px-3 rounded-xl flex items-center gap-1.5 border-2 bg-card text-foreground shadow-md transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
         >
           <Globe size={18} />
@@ -119,7 +119,7 @@ function LoginPage() {
         </button>
         <button
           onClick={toggleTheme}
-          aria-label="Toggle dark mode"
+          aria-label={t("common.toggleDarkMode")}
           className="w-10 h-10 rounded-xl flex items-center justify-center border-2 bg-card text-foreground shadow-md transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
         >
           {theme === "dark" ? (

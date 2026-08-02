@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CreditCard, HardHat } from "lucide-react";
+import { CreditCard, HardHat, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PlanCards } from "@/components/PlanCards";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/billing")({
   component: BillingPage,
@@ -13,6 +14,28 @@ const hazardStripe = (a = "var(--color-primary)", b = "var(--color-navy)") =>
 
 function BillingPage() {
   const { t } = useTranslation();
+  const { role } = useAuth();
+
+  // Access to a team's plan is gated to managers everywhere else in the app
+  // (billing is the manager's, not a site worker's or subcontractor's — see
+  // SiteWorkerShell/SubcontractorShell, neither of which link here). This
+  // route itself has no auth-context role check upstream, so it's still
+  // reachable directly; render a plain notice instead of real plan-cards +
+  // checkout for anyone who isn't a manager, rather than relying on the
+  // create-checkout edge function's own role check as the only backstop.
+  if (role !== "manager") {
+    return (
+      <div className="flex flex-col items-center justify-center text-center gap-3 py-20">
+        <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
+          <Lock className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <h1 className="text-lg font-bold">{t("billing.managerOnlyTitle")}</h1>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          {t("billing.managerOnlyBody")}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">

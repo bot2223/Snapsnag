@@ -521,12 +521,12 @@ function AddSnag() {
             </Select>
             {subs?.length === 0 && (
               <p className="text-xs text-muted-foreground">
-                No subcontractors yet.{" "}
+                {t("add.noSubsHint")}{" "}
                 <Link
                   to="/team"
                   className="text-primary font-medium underline underline-offset-2"
                 >
-                  Add one in Team →
+                  {t("add.addOneInTeam")}
                 </Link>
               </p>
             )}

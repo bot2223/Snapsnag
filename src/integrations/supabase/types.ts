@@ -7,15 +7,29 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
       ai_analysis_calls: {
-        Row: { created_at: string; id: string; user_id: string }
-        Insert: { created_at?: string; id?: string; user_id: string }
-        Update: { created_at?: string; id?: string; user_id?: string }
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
         Relationships: []
       }
       company_settings: {
@@ -241,9 +255,21 @@ export type Database = {
         ]
       }
       report_generation_calls: {
-        Row: { created_at: string; id: string; user_id: string }
-        Insert: { created_at?: string; id?: string; user_id: string }
-        Update: { created_at?: string; id?: string; user_id?: string }
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
         Relationships: []
       }
       report_schedules: {
@@ -405,8 +431,8 @@ export type Database = {
       }
       snags: {
         Row: {
-          category: Database["public"]["Enums"]["snag_category"]
           captured_at: string | null
+          category: Database["public"]["Enums"]["snag_category"]
           created_at: string | null
           deadline_at: string | null
           description: string
@@ -430,8 +456,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          category: Database["public"]["Enums"]["snag_category"]
           captured_at?: string | null
+          category: Database["public"]["Enums"]["snag_category"]
           created_at?: string | null
           deadline_at?: string | null
           description: string
@@ -455,8 +481,8 @@ export type Database = {
           user_id: string
         }
         Update: {
-          category?: Database["public"]["Enums"]["snag_category"]
           captured_at?: string | null
+          category?: Database["public"]["Enums"]["snag_category"]
           created_at?: string | null
           deadline_at?: string | null
           description?: string
@@ -599,6 +625,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_invite_preview: { Args: { invite_code: string }; Returns: Json }
       get_my_team_theme: { Args: never; Returns: Json }
       redeem_invite_code: { Args: { invite_code: string }; Returns: undefined }
       set_my_accent_color: { Args: { p_color: string }; Returns: Json }

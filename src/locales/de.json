@@ -1,6 +1,23 @@
 {
   "offline": {
-    "requiresInternet": "Erfordert eine Internetverbindung"
+    "requiresInternet": "Erfordert eine Internetverbindung",
+    "banner": {
+      "needsAuth_one": "Melde dich erneut an, um {{count}} Mangel zu synchronisieren. Nichts geht verloren — er ist noch auf diesem Gerät gespeichert.",
+      "needsAuth_other": "Melde dich erneut an, um {{count}} Mängel zu synchronisieren. Nichts geht verloren — sie sind noch auf diesem Gerät gespeichert.",
+      "pendingOnline_one": "{{count}} Mangel wartet auf Synchronisierung.",
+      "pendingOnline_other": "{{count}} Mängel warten auf Synchronisierung.",
+      "pendingOffline_one": "{{count}} Mangel wartet auf Synchronisierung — wartet auf eine Verbindung.",
+      "pendingOffline_other": "{{count}} Mängel warten auf Synchronisierung — warten auf eine Verbindung.",
+      "failed_one": "{{count}} Mangel konnte nicht gespeichert werden — Details unter „Meine Mängel“.",
+      "failed_other": "{{count}} Mängel konnten nicht gespeichert werden — Details unter „Meine Mängel“."
+    },
+    "failedPanel": {
+      "title": "Nicht synchronisiert",
+      "reasonUnknown": "Beim Speichern ist etwas schiefgelaufen.",
+      "retry": "Erneut versuchen",
+      "discard": "Verwerfen",
+      "discardConfirm": "Diesen Mangel verwerfen? Das kann nicht rückgängig gemacht werden."
+    }
   },
   "nav": {
     "snags": "Mängel",
@@ -23,7 +40,9 @@
     "tryAgain": "Erneut versuchen"
   },
   "common": {
-    "loading": "Wird geladen…"
+    "loading": "Wird geladen…",
+    "toggleDarkMode": "Dunkelmodus umschalten",
+    "toggleLanguage": "Sprache umschalten"
   },
   "dashboard": {
     "title": "Übersicht",
@@ -75,7 +94,7 @@
     "emailPlaceholder": "name@firma.de",
     "password": "Passwort",
     "passwordPlaceholder": "••••••••",
-    "passwordHint": "Mindestens 8 Zeichen, mit einem Sonderzeichen",
+    "passwordHint": "Mindestens 12 Zeichen, mit einem Sonderzeichen",
     "passwordTooShort": "Das Passwort muss mindestens 12 Zeichen lang sein",
     "passwordNeedsSpecial": "Das Passwort muss ein Sonderzeichen enthalten (z.B. ! @ # $)",
     "choosePassword": "Passwort wählen",
@@ -353,7 +372,9 @@
       "teamMembers": "Teammitglieder",
       "slaDeadlines": "Countdown-Timer",
       "automatedReports": "Automatisierte PDF-Berichte"
-    }
+    },
+    "managerOnlyTitle": "Die Abrechnung wird von deinem Manager verwaltet",
+    "managerOnlyBody": "Nur ein Manager kann den Tarif für dein Team ansehen oder ändern."
   },
   "add": {
     "title": "Mangel erfassen",
@@ -405,7 +426,9 @@
       "aiComplete": "KI-Analyse abgeschlossen",
       "aiFailed": "Die KI hat nicht geantwortet. Bitte versuche es erneut.",
       "rateLimited": "Tägliches KI-Analyse-Limit erreicht ({{limit}}/Tag in deinem Plan). Versuche es später erneut oder upgrade für ein höheres Limit."
-    }
+    },
+    "noSubsHint": "Noch keine Subunternehmer.",
+    "addOneInTeam": "Im Team hinzufügen →"
   },
   "insights": {
     "title": "Berichte",
@@ -482,7 +505,8 @@
       "leftDaysHours": "noch {{d}} Tg {{h}} Std",
       "leftHoursMins": "noch {{h}} Std {{m}} Min",
       "leftMins": "noch {{m}} Min"
-    }
+    },
+    "subcontractorFallback": "Subunternehmer"
   },
   "nameGate": {
     "title": "Willkommen bei SnapSnag",
@@ -524,12 +548,19 @@
     "toast": {
       "joined": "Willkommen im Team!",
       "invalidLink": "Dieser Einladungslink ist ungültig oder abgelaufen."
-    }
+    },
+    "invitedTo": "Du trittst {{company}} bei",
+    "invitedToGeneric": "Du trittst einem Team auf SnapSnag bei",
+    "roleSubcontractor": "als Subunternehmer",
+    "roleSiteWorker": "als Site Worker",
+    "invalidOrExpired": "Dieser Einladungslink ist ungültig oder abgelaufen."
   },
   "floorPlan": {
     "pinLocation": "Standort im Plan",
     "clearPin": "Stecknadel entfernen",
     "loading": "Plan wird geladen…",
-    "tapToPlace": "Tippen, wo das Problem ist"
+    "tapToPlace": "Tippen, wo das Problem ist",
+    "zoomHint": "Zum genauen Setzen des Pins zoomen (kneifen oder scrollen)",
+    "resetZoom": "Zoom zurücksetzen"
   }
 }

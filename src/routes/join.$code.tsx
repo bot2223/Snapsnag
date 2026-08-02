@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, HardHat, Sun, Moon, Globe, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, PENDING_INVITE_KEY } from "@/lib/auth-context";
@@ -12,12 +12,20 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 
-// Public route: anyone with a link can land here, but the invite code is
-// opaque and only usable once (see redeem_invite_code in
-// 20260708120000_invite_link_site_workers.sql). This page never reveals
-// which manager sent the invite, or anything about the code, before
-// redemption succeeds — avoids leaking info to someone probing random
-// /join/<guess> URLs.
+// Public route: anyone with a link can land here. The invite code itself
+// is opaque and only usable once (see redeem_invite_code in
+// 20260708120000_invite_link_site_workers.sql).
+//
+// This page *does* show the company name (via get_invite_preview, an anon
+// RPC) before asking for a password — a bare "create a password" form with
+// zero context reads as untrustworthy to someone who got a link from a
+// manager rather than choosing to sign up. That RPC deliberately returns
+// only company name + role (never the manager's email or anything else),
+// and resolves identically (NULL) for a wrong, expired, or already-used
+// code — no separate path or timing tell between those cases. Codes are
+// 32-char high-entropy tokens, not guessable, so this doesn't meaningfully
+// change what a brute-force attempt could already infer from attempting a
+// full signup + redeem.
 //
 // Two things this page must never do, learned the hard way:
 //   1. Redeem a code against whatever session happens to already be active
@@ -55,6 +63,23 @@ function JoinPage() {
   // successful join, which is confusing given the person didn't ask to
   // sign out of anything.
   const [redeemed, setRedeemed] = useState(false);
+  // undefined = still loading; null = code is invalid/expired/used (shown
+  // generically, same as an unrecognized code — see comment above).
+  const [preview, setPreview] = useState<
+    { company_name: string | null; role: string } | null | undefined
+  >(undefined);
+
+  useEffect(() => {
+    let active = true;
+    supabase
+      .rpc("get_invite_preview", { invite_code: code })
+      .then(({ data }) => {
+        if (active) setPreview((data as typeof preview) ?? null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [code]);
 
   const toggleLanguage = () => {
     const next = i18n.language === "en" ? "de" : "en";
@@ -134,7 +159,7 @@ function JoinPage() {
         type="button"
         onClick={toggleTheme}
         className="p-2 hover:bg-muted rounded-xl transition-colors"
-        aria-label="Toggle theme"
+        aria-label={t("common.toggleDarkMode")}
       >
         {theme === "light" ? (
           <Moon size={18} className="text-slate-600" />
@@ -146,7 +171,7 @@ function JoinPage() {
         type="button"
         onClick={toggleLanguage}
         className="p-2 hover:bg-muted rounded-xl transition-colors flex items-center gap-1.5"
-        aria-label="Toggle language"
+        aria-label={t("common.toggleLanguage")}
       >
         <Globe size={18} className="text-slate-600 dark:text-slate-300" />
         <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
@@ -239,8 +264,18 @@ function JoinPage() {
           <div className="mx-auto h-12 w-12 rounded-2xl bg-navy text-navy-foreground flex items-center justify-center">
             <HardHat className="h-6 w-6" />
           </div>
-          <h1 className="text-xl font-bold">{t("join.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("join.subtitle")}</p>
+          <h1 className="text-xl font-bold">
+            {preview?.company_name
+              ? t("join.invitedTo", { company: preview.company_name })
+              : t("join.invitedToGeneric")}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {preview?.role === "subcontractor"
+              ? t("join.roleSubcontractor")
+              : preview?.role === "site_worker"
+                ? t("join.roleSiteWorker")
+                : t("join.subtitle")}
+          </p>
         </div>
         <form onSubmit={submit} className="space-y-3">
           <Input
@@ -252,13 +287,18 @@ function JoinPage() {
             className={inputClass}
             autoFocus
           />
-          <PasswordInput
-            required
-            placeholder={t("login.passwordPlaceholder")}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
-          />
+          <div>
+            <PasswordInput
+              required
+              placeholder={t("login.passwordPlaceholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+            />
+            <p className="text-xs mt-1.5 text-muted-foreground">
+              {t("login.passwordHint")}
+            </p>
+          </div>
           <Button
             type="submit"
             disabled={busy}

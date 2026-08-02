@@ -13,6 +13,7 @@ import { getSignedUrl } from "@/lib/storage-url";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { timeAgo } from "@/lib/time-ago";
+import { FailedSyncPanel } from "@/components/FailedSyncPanel";
 
 export const Route = createFileRoute("/_authenticated/my-snags")({
   component: MySnags,
@@ -187,6 +188,8 @@ function MySnags() {
 
   return (
     <div className="space-y-4">
+      <FailedSyncPanel />
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
           {t("mySnags.title")}

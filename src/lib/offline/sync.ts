@@ -14,7 +14,25 @@ export type SyncOutcome =
 // Errors that mean "the server actively rejected this" — stop retrying and
 // surface it. Everything else (network drop, timeout, 5xx) is assumed
 // transient and left as-is for the next sync attempt.
-function isTerminalError(message: string): boolean {
+//
+// Checked in two layers: first the Postgres SQLSTATE code, when the error
+// carries one (Postgrest errors always do; Storage errors sometimes do).
+// Class 22 (data exception — e.g. a bad enum value) and 23 (integrity
+// constraint violation — unique/check/FK/not-null) and 42501 (RLS /
+// insufficient privilege) are permanent by definition: retrying the exact
+// same payload can never make them succeed. This catches real rejections
+// that don't happen to contain one of the message keywords below.
+// The message-substring check stays as a fallback for our own custom
+// `RAISE EXCEPTION` messages (plan limits, etc.), which use a generic
+// SQLSTATE (P0001) and only differ by wording.
+function isTerminalError(error: unknown, message: string): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  if (
+    code &&
+    (code.startsWith("22") || code.startsWith("23") || code === "42501")
+  ) {
+    return true;
+  }
   const m = message.toLowerCase();
   return (
     m.includes("limit") ||
@@ -36,13 +54,15 @@ async function uploadPhotoIfNeeded(item: QueuedSnag): Promise<string | null> {
   if (!item.photoBlob) return null;
   if (item.photoPath) return item.photoPath; // already uploaded on a prior attempt
 
-  const ext = extFromType(item.photoBlob.type) || extFromType(item.payload.photoType);
+  const ext =
+    extFromType(item.photoBlob.type) || extFromType(item.payload.photoType);
   const path = `${item.userId}/${item.id}.${ext}`;
 
   const { error } = await supabase.storage
     .from("snag-photos")
     .upload(path, item.photoBlob, {
-      contentType: item.payload.photoType || item.photoBlob.type || "image/jpeg",
+      contentType:
+        item.payload.photoType || item.photoBlob.type || "image/jpeg",
     });
 
   if (error) {
@@ -74,9 +94,11 @@ async function insertRowIfNeeded(item: QueuedSnag, photoPath: string | null) {
       description_en: item.payload.description_en,
       description_de: item.payload.description_de,
       location: item.payload.location,
-      category: item.payload.category as Database["public"]["Enums"]["snag_category"],
+      category: item.payload
+        .category as Database["public"]["Enums"]["snag_category"],
       subcontractor_id: item.payload.subcontractor_id,
-      priority: item.payload.priority as Database["public"]["Enums"]["snag_priority"],
+      priority: item.payload
+        .priority as Database["public"]["Enums"]["snag_priority"],
       notes: item.payload.notes,
       captured_at: item.capturedAt,
       // Floor plan pinning is out of scope for offline v1 (see sync engine
@@ -90,7 +112,9 @@ async function insertRowIfNeeded(item: QueuedSnag, photoPath: string | null) {
   if (error) throw error;
 }
 
-async function syncOne(item: QueuedSnag): Promise<"synced" | "failed" | "retry-later"> {
+async function syncOne(
+  item: QueuedSnag,
+): Promise<"synced" | "failed" | "retry-later"> {
   try {
     let photoPath = item.photoPath;
     if (item.status === "queued") {
@@ -106,7 +130,7 @@ async function syncOne(item: QueuedSnag): Promise<"synced" | "failed" | "retry-l
     return "synced";
   } catch (e) {
     const message = (e as Error).message || "Sync failed";
-    if (isTerminalError(message)) {
+    if (isTerminalError(e, message)) {
       await updateQueuedSnag(item.id, {
         status: "failed",
         lastError: message,

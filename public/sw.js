@@ -76,11 +76,33 @@ self.addEventListener("activate", (event) => {
 //   - Same-origin GET only. Any cross-origin request (Supabase, storage,
 //     fonts) falls through untouched.
 //   - Navigations (full page loads / URL-bar reloads / navbar navigation):
-//     network-first, falling back to the cached shell when offline. This
-//     is what fixes the browser error page you'd otherwise see.
+//     network-first when there's a real chance the network works, falling
+//     back to the cached shell fast when there isn't — see below.
 //   - Built assets under /assets/ (Vite content-hashes these filenames):
 //     cache-first, since a given hash is either already correct forever
 //     or doesn't exist yet — never stale.
+// A plain `fetch(req).catch(...)` looks offline-safe, but it isn't fast:
+// when there's no real connectivity, the browser doesn't always reject a
+// fetch quickly — DNS/connection attempts can take many seconds to
+// definitively fail, and until they do, the app just sits on a blank
+// screen. That's the "takes ages to open with wifi off" symptom. Two
+// layers fix it:
+//   1. navigator.onLine is near-instant and reliably true for "the radio
+//      is literally off" (airplane mode, wifi toggled off) — skip the
+//      network attempt entirely in that case.
+//   2. A short timeout race covers the case navigator.onLine can't see:
+//      connected to a network with no real internet behind it (captive
+//      portal, dead wifi, one bar of cellular). If the network fetch
+//      hasn't resolved within NAV_TIMEOUT_MS, serve the cached shell
+//      immediately rather than waiting on it — the fetch is left to
+//      finish in the background and, if it does succeed, still refreshes
+//      the cached shell for next time.
+const NAV_TIMEOUT_MS = 2500;
+
+function serveCachedShell(req) {
+  return caches.match("/").then((cached) => cached || caches.match(req));
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -112,14 +134,25 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (req.mode === "navigate") {
+    if (!self.navigator.onLine) {
+      event.respondWith(serveCachedShell(req));
+      return;
+    }
+
+    const networkFetch = fetch(req).then((res) => {
+      const copy = res.clone();
+      caches.open(SHELL_CACHE).then((cache) => cache.put("/", copy));
+      return res;
+    });
+
+    const timeout = new Promise((resolve) => {
+      setTimeout(() => resolve(null), NAV_TIMEOUT_MS);
+    });
+
     event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(SHELL_CACHE).then((cache) => cache.put("/", copy));
-          return res;
-        })
-        .catch(() => caches.match("/").then((cached) => cached || caches.match(req))),
+      Promise.race([networkFetch, timeout])
+        .then((res) => res || serveCachedShell(req))
+        .catch(() => serveCachedShell(req)),
     );
     return;
   }

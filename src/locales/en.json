@@ -1,6 +1,23 @@
 {
   "offline": {
-    "requiresInternet": "Requires an internet connection"
+    "requiresInternet": "Requires an internet connection",
+    "banner": {
+      "needsAuth_one": "Sign in again to finish syncing {{count}} snag. Nothing is lost — it's still saved on this device.",
+      "needsAuth_other": "Sign in again to finish syncing {{count}} snags. Nothing is lost — they're still saved on this device.",
+      "pendingOnline_one": "{{count}} snag waiting to sync.",
+      "pendingOnline_other": "{{count}} snags waiting to sync.",
+      "pendingOffline_one": "{{count}} snag waiting to sync — waiting for a connection.",
+      "pendingOffline_other": "{{count}} snags waiting to sync — waiting for a connection.",
+      "failed_one": "{{count}} snag couldn't be saved — check My Snags for details.",
+      "failed_other": "{{count}} snags couldn't be saved — check My Snags for details."
+    },
+    "failedPanel": {
+      "title": "Couldn't sync",
+      "reasonUnknown": "Something went wrong saving this.",
+      "retry": "Retry",
+      "discard": "Discard",
+      "discardConfirm": "Discard this snag? This can't be undone."
+    }
   },
   "nav": {
     "snags": "Snags",
@@ -23,7 +40,9 @@
     "tryAgain": "Try again"
   },
   "common": {
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "toggleDarkMode": "Toggle dark mode",
+    "toggleLanguage": "Toggle language"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -75,7 +94,7 @@
     "emailPlaceholder": "name@company.com",
     "password": "Password",
     "passwordPlaceholder": "••••••••",
-    "passwordHint": "At least 8 characters, with one special character",
+    "passwordHint": "At least 12 characters, with one special character",
     "passwordTooShort": "Password must be at least 12 characters",
     "passwordNeedsSpecial": "Password must include one special character (e.g. ! @ # $)",
     "choosePassword": "Choose password",
@@ -353,7 +372,9 @@
       "teamMembers": "Team Members",
       "slaDeadlines": "Countdown Timer",
       "automatedReports": "Automated PDF Reports"
-    }
+    },
+    "managerOnlyTitle": "Billing is managed by your manager",
+    "managerOnlyBody": "Only a manager can view or change the plan for your team."
   },
   "add": {
     "title": "Log a Snag",
@@ -405,7 +426,9 @@
       "aiComplete": "AI analysis complete",
       "aiFailed": "AI didn't respond. Please try again.",
       "rateLimited": "Daily AI analysis limit reached ({{limit}}/day on your plan). Try again later or upgrade for a higher limit."
-    }
+    },
+    "noSubsHint": "No subcontractors yet.",
+    "addOneInTeam": "Add one in Team →"
   },
   "insights": {
     "title": "Insights",
@@ -482,7 +505,8 @@
       "leftDaysHours": "{{d}}d {{h}}h left",
       "leftHoursMins": "{{h}}h {{m}}m left",
       "leftMins": "{{m}}m left"
-    }
+    },
+    "subcontractorFallback": "Subcontractor"
   },
   "nameGate": {
     "title": "Welcome to SnapSnag",
@@ -524,12 +548,19 @@
     "toast": {
       "joined": "Welcome to the team!",
       "invalidLink": "This invite link is invalid or has expired."
-    }
+    },
+    "invitedTo": "You're joining {{company}}",
+    "invitedToGeneric": "You're joining a team on SnapSnag",
+    "roleSubcontractor": "as a subcontractor",
+    "roleSiteWorker": "as a site worker",
+    "invalidOrExpired": "This invite link is invalid or has expired."
   },
   "floorPlan": {
     "pinLocation": "Location on plan",
     "clearPin": "Clear pin",
     "loading": "Loading plan…",
-    "tapToPlace": "Tap where the issue is"
+    "tapToPlace": "Tap where the issue is",
+    "zoomHint": "Pinch or scroll to zoom in for a precise pin",
+    "resetZoom": "Reset zoom"
   }
 }

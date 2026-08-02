@@ -15,6 +15,9 @@ import { getSignedUrl } from "@/lib/storage-url";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import { getLocalizedDescription } from "@/lib/snag-i18n";
+import { Pagination } from "@/components/Pagination";
+
+const PAGE_SIZE = 10;
 
 const PRIORITY_STYLES: Record<string, { bar: string; badge: string }> = {
   Critical: { bar: "bg-red-500", badge: "bg-red-100 text-red-700" },
@@ -189,6 +192,14 @@ export function SubcontractorDashboard() {
   const overdue = counts?.overdue ?? 0;
   const showSkeleton = isLoading && !data;
 
+  const [page, setPage] = useState(0);
+  const totalPages = data ? Math.max(1, Math.ceil(data.length / PAGE_SIZE)) : 1;
+  const pageSafe = Math.min(page, totalPages - 1);
+  const pageItems = data?.slice(
+    pageSafe * PAGE_SIZE,
+    pageSafe * PAGE_SIZE + PAGE_SIZE,
+  );
+
   return (
     <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
       {showSkeleton ? (
@@ -202,7 +213,7 @@ export function SubcontractorDashboard() {
             {t("subDashboard.welcomeBack")}
           </p>
           <h1 className="text-2xl font-bold tracking-tight mb-3">
-            {subcontractorName ?? "Subcontractor"}
+            {subcontractorName ?? t("subDashboard.subcontractorFallback")}
           </h1>
           <div className="flex gap-6">
             <div className="flex items-baseline gap-1.5">
@@ -269,9 +280,9 @@ export function SubcontractorDashboard() {
           </div>
         )}
 
-        {!showSkeleton && data && data.length > 0 && (
+        {!showSkeleton && pageItems && pageItems.length > 0 && (
           <div className="space-y-3">
-            {data.map((snag) => {
+            {pageItems.map((snag) => {
               const p = snag.priority
                 ? PRIORITY_STYLES[snag.priority]
                 : PRIORITY_STYLES.Medium;
@@ -336,6 +347,11 @@ export function SubcontractorDashboard() {
             })}
           </div>
         )}
+        <Pagination
+          page={pageSafe}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
       </section>
     </div>
   );

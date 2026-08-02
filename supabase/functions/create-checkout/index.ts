@@ -59,6 +59,22 @@ serve(async (req) => {
       });
     }
 
+    // Billing belongs to the manager — a site worker or subcontractor has no
+    // subscription of their own that does anything (their access is gated by
+    // their manager's plan, not this row), so letting them reach checkout
+    // here would let someone pay real money for a plan with zero effect.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.role !== "manager") {
+      return new Response(
+        JSON.stringify({ error: "Only a manager can manage billing" }),
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
     const { plan } = await req.json();
     const priceId = PRICE_IDS[plan];
     if (!priceId) throw new Error(`Invalid plan: ${plan}`);

@@ -39,7 +39,7 @@ export function TrialExpiredWall({ status }: Props) {
         <button
           onClick={toggleTheme}
           className="p-2 hover:bg-muted rounded-xl transition-colors"
-          aria-label="Toggle dark mode"
+          aria-label={t("common.toggleDarkMode")}
         >
           {theme === "light" ? (
             <Moon size={18} className="text-slate-600" />
@@ -50,7 +50,7 @@ export function TrialExpiredWall({ status }: Props) {
         <button
           onClick={toggleLanguage}
           className="p-2 hover:bg-muted rounded-xl transition-colors flex items-center gap-1.5"
-          aria-label="Toggle language"
+          aria-label={t("common.toggleLanguage")}
         >
           <Globe size={18} className="text-slate-600 dark:text-slate-300" />
           <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">

@@ -81,7 +81,7 @@ export function SubcontractorShell({ children }: { children: ReactNode }) {
             <button
               onClick={toggleTheme}
               className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-              aria-label="Toggle theme"
+              aria-label={t("common.toggleDarkMode")}
             >
               {theme === "light" ? (
                 <Moon size={16} className="text-navy-foreground" />
@@ -92,7 +92,7 @@ export function SubcontractorShell({ children }: { children: ReactNode }) {
             <button
               onClick={toggleLanguage}
               className="p-2 hover:bg-white/10 rounded-xl transition-colors flex items-center gap-1"
-              aria-label="Toggle language"
+              aria-label={t("common.toggleLanguage")}
             >
               <Globe size={16} className="text-navy-foreground" />
               <span className="text-xs font-bold text-navy-foreground uppercase">
