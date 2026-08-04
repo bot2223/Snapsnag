@@ -21,6 +21,26 @@ const SHELL_CACHE = "snapsnag-shell-v1";
 const PRECACHE_URLS = ["/", "/manifest.json", "/icon-192.png"];
 const PHOTO_CACHE = "snapsnag-photos-v1";
 
+// Same public key as usePushSubscription.ts — duplicated rather than shared
+// since the service worker and the app bundle aren't part of the same
+// module graph. Needed here to resubscribe with the exact same key on
+// pushsubscriptionchange (see handler near the bottom of this file); using
+// a different key would silently create a subscription the backend's
+// VAPID_PRIVATE_KEY can't send to.
+const VAPID_PUBLIC_KEY =
+  "BGYVJOrjiZenkFaLCKcM8xuzViWcZeoTcL_OKqw6nzOL5oxRnIH2OXqzf2D7Pu2U6ynyRTrn1C3PRal9v_BxwsI";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const bytes = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) {
+    bytes[i] = rawData.charCodeAt(i);
+  }
+  return bytes;
+}
+
 // Supabase signs storage URLs with a fresh token on every request
 // (getSignedUrl in storage-url.ts), so the same photo gets a different full
 // URL each time it's fetched — a plain cache-by-URL strategy would never hit
@@ -57,17 +77,19 @@ self.addEventListener("activate", (event) => {
       // Drop caches from a previous SHELL_CACHE version so old bundles
       // don't accumulate across deploys. Bump the version string above
       // whenever a change needs a hard cache bust.
-      caches.keys().then((keys) =>
-        Promise.all(
-          keys
-            .filter(
-              (key) =>
-                (key.startsWith("snapsnag-shell-") && key !== SHELL_CACHE) ||
-                (key.startsWith("snapsnag-photos-") && key !== PHOTO_CACHE),
-            )
-            .map((key) => caches.delete(key)),
+      caches
+        .keys()
+        .then((keys) =>
+          Promise.all(
+            keys
+              .filter(
+                (key) =>
+                  (key.startsWith("snapsnag-shell-") && key !== SHELL_CACHE) ||
+                  (key.startsWith("snapsnag-photos-") && key !== PHOTO_CACHE),
+              )
+              .map((key) => caches.delete(key)),
+          ),
         ),
-      ),
     ]),
   );
 });
@@ -214,5 +236,37 @@ self.addEventListener("notificationclick", (event) => {
         }
         return self.clients.openWindow(targetUrl);
       }),
+  );
+});
+
+// Browsers periodically rotate a push subscription's endpoint on their own
+// (normal push-service housekeeping, not something the user did) and fire
+// this event when they do. Without handling it, the old endpoint in the
+// database goes dead, the app's "is this device subscribed" check finds no
+// matching row, and it re-shows the "enable notifications" banner — even
+// though the user already granted permission and never touched anything.
+// Resubscribing here with the *same* VAPID key and messaging every open
+// tab with the new subscription (so it can upsert the new row and drop the
+// old one) means a rotation is invisible to the user instead of looking
+// like their setting got reset.
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      const oldEndpoint = event.oldSubscription?.endpoint ?? null;
+      const newSubscription = await self.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+      const clientList = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      const message = {
+        type: "PUSH_SUBSCRIPTION_CHANGED",
+        subscription: newSubscription.toJSON(),
+        oldEndpoint,
+      };
+      for (const client of clientList) client.postMessage(message);
+    })(),
   );
 });

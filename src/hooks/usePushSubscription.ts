@@ -19,7 +19,10 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
 }
 
 export type PushPermissionState =
-  "unsupported" | "default" | "granted" | "denied";
+  | "unsupported"
+  | "default"
+  | "granted"
+  | "denied";
 
 type PushTarget =
   | { table: "push_subscriptions"; idColumn: "subcontractor_id"; id: string }
@@ -42,6 +45,61 @@ export function usePushSubscription(target: PushTarget | null) {
     "serviceWorker" in navigator &&
     "PushManager" in window;
 
+  const saveSubscription = useCallback(
+    async (sub: {
+      endpoint: string;
+      keys: { p256dh: string; auth: string };
+    }) => {
+      if (!target) return { ok: false as const, error: "no target" };
+      const { error } =
+        target.table === "push_subscriptions"
+          ? await supabase.from("push_subscriptions").upsert(
+              {
+                subcontractor_id: target.id,
+                endpoint: sub.endpoint,
+                p256dh: sub.keys.p256dh,
+                auth: sub.keys.auth,
+              },
+              { onConflict: "subcontractor_id,endpoint" },
+            )
+          : await supabase.from("manager_push_subscriptions").upsert(
+              {
+                user_id: target.id,
+                endpoint: sub.endpoint,
+                p256dh: sub.keys.p256dh,
+                auth: sub.keys.auth,
+              },
+              { onConflict: "user_id,endpoint" },
+            );
+      if (error) {
+        console.error("Failed to save push subscription:", error);
+        return { ok: false as const, error: error.message };
+      }
+      return { ok: true as const };
+    },
+    [target?.table, target?.id],
+  );
+
+  const deleteSubscriptionByEndpoint = useCallback(
+    async (endpoint: string) => {
+      if (!target) return;
+      if (target.table === "push_subscriptions") {
+        await supabase
+          .from("push_subscriptions")
+          .delete()
+          .eq("subcontractor_id", target.id)
+          .eq("endpoint", endpoint);
+      } else {
+        await supabase
+          .from("manager_push_subscriptions")
+          .delete()
+          .eq("user_id", target.id)
+          .eq("endpoint", endpoint);
+      }
+    },
+    [target?.table, target?.id],
+  );
+
   useEffect(() => {
     if (!supported) {
       setPermission("unsupported");
@@ -54,31 +112,82 @@ export function usePushSubscription(target: PushTarget | null) {
   useEffect(() => {
     if (!supported || !target) return;
     (async () => {
-      const registration = await navigator.serviceWorker.ready;
-      const existing = await registration.pushManager.getSubscription();
-      if (!existing) {
-        setSubscribed(false);
-        return;
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const existing = await registration.pushManager.getSubscription();
+        if (!existing) {
+          setSubscribed(false);
+          return;
+        }
+        // Supabase's generated types can't narrow on a dynamic table name,
+        // so branch explicitly rather than fighting the generics.
+        const { data } =
+          target.table === "push_subscriptions"
+            ? await supabase
+                .from("push_subscriptions")
+                .select("id")
+                .eq("subcontractor_id", target.id)
+                .eq("endpoint", existing.endpoint)
+                .maybeSingle()
+            : await supabase
+                .from("manager_push_subscriptions")
+                .select("id")
+                .eq("user_id", target.id)
+                .eq("endpoint", existing.endpoint)
+                .maybeSingle();
+        setSubscribed(!!data);
+      } catch (err) {
+        // Leaving `subscribed` at its default (false) here would otherwise
+        // permanently show the "enable notifications" banner with no way
+        // to tell why — surfacing the error at least makes it debuggable
+        // instead of silently swallowed.
+        console.error("Failed to check push subscription state:", err);
       }
-      // Supabase's generated types can't narrow on a dynamic table name, so
-      // branch explicitly rather than fighting the generics.
-      const { data } =
-        target.table === "push_subscriptions"
-          ? await supabase
-              .from("push_subscriptions")
-              .select("id")
-              .eq("subcontractor_id", target.id)
-              .eq("endpoint", existing.endpoint)
-              .maybeSingle()
-          : await supabase
-              .from("manager_push_subscriptions")
-              .select("id")
-              .eq("user_id", target.id)
-              .eq("endpoint", existing.endpoint)
-              .maybeSingle();
-      setSubscribed(!!data);
     })();
   }, [supported, target?.table, target?.id]);
+
+  // Browsers rotate a push subscription's endpoint on their own from time
+  // to time — the service worker's pushsubscriptionchange handler resubs
+  // and posts the result here (see public/sw.js). Without this, a rotation
+  // makes the device look unsubscribed (the old endpoint is dead, so the
+  // check above finds no matching row) and the person gets asked to
+  // "enable notifications" again despite never having changed anything.
+  useEffect(() => {
+    if (!supported || !target) return;
+    const handler = async (event: MessageEvent) => {
+      if (event.data?.type !== "PUSH_SUBSCRIPTION_CHANGED") return;
+      const { subscription, oldEndpoint } = event.data as {
+        subscription: {
+          endpoint: string;
+          keys?: { p256dh: string; auth: string };
+        };
+        oldEndpoint: string | null;
+      };
+      if (!subscription?.endpoint || !subscription.keys) return;
+
+      const result = await saveSubscription({
+        endpoint: subscription.endpoint,
+        keys: subscription.keys,
+      });
+      if (!result.ok) return;
+      setSubscribed(true);
+
+      // Best-effort: drop the dead row so they don't accumulate indefinitely
+      // (harmless to leave — the send functions already self-clean on a
+      // 404/410 from the push service — but no reason not to tidy up here
+      // too, and it happens right when we know for certain it's dead).
+      if (oldEndpoint) await deleteSubscriptionByEndpoint(oldEndpoint);
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", handler);
+  }, [
+    supported,
+    target?.table,
+    target?.id,
+    saveSubscription,
+    deleteSubscriptionByEndpoint,
+  ]);
 
   const subscribe = useCallback(async () => {
     if (!supported || !target) return { ok: false, error: "unsupported" };
@@ -100,38 +209,21 @@ export function usePushSubscription(target: PushTarget | null) {
       }
 
       const json = subscription.toJSON();
-      const { error } =
-        target.table === "push_subscriptions"
-          ? await supabase.from("push_subscriptions").upsert(
-              {
-                subcontractor_id: target.id,
-                endpoint: subscription.endpoint,
-                p256dh: json.keys!.p256dh,
-                auth: json.keys!.auth,
-              },
-              { onConflict: "subcontractor_id,endpoint" },
-            )
-          : await supabase.from("manager_push_subscriptions").upsert(
-              {
-                user_id: target.id,
-                endpoint: subscription.endpoint,
-                p256dh: json.keys!.p256dh,
-                auth: json.keys!.auth,
-              },
-              { onConflict: "user_id,endpoint" },
-            );
-
-      if (error) {
-        console.error("Failed to save push subscription:", error);
-        return { ok: false, error: error.message };
+      if (!json.endpoint || !json.keys) {
+        return { ok: false, error: "invalid subscription" };
       }
+      const result = await saveSubscription({
+        endpoint: json.endpoint,
+        keys: json.keys as { p256dh: string; auth: string },
+      });
+      if (!result.ok) return result;
 
       setSubscribed(true);
       return { ok: true };
     } finally {
       setLoading(false);
     }
-  }, [supported, target?.table, target?.id]);
+  }, [supported, target?.table, target?.id, saveSubscription]);
 
   return { supported, permission, subscribed, loading, subscribe };
 }
