@@ -17,7 +17,7 @@
 // separately below by stable storage path (see PHOTO_CACHE) since every
 // signed URL for the same photo is otherwise a different URL.
 
-const SHELL_CACHE = "snapsnag-shell-v1";
+const SHELL_CACHE = "snapsnag-shell-v2";
 const PRECACHE_URLS = ["/", "/manifest.json", "/icon-192.png"];
 const PHOTO_CACHE = "snapsnag-photos-v1";
 
@@ -162,8 +162,10 @@ self.addEventListener("fetch", (event) => {
     }
 
     const networkFetch = fetch(req).then((res) => {
-      const copy = res.clone();
-      caches.open(SHELL_CACHE).then((cache) => cache.put("/", copy));
+      if (res.ok) {
+        const copy = res.clone();
+        caches.open(SHELL_CACHE).then((cache) => cache.put("/", copy));
+      }
       return res;
     });
 
@@ -185,8 +187,14 @@ self.addEventListener("fetch", (event) => {
         (cached) =>
           cached ||
           fetch(req).then((res) => {
-            const copy = res.clone();
-            caches.open(SHELL_CACHE).then((cache) => cache.put(req, copy));
+            // Only cache a real success. Caching a 404/500 here would
+            // brick that chunk forever — cache-first means every future
+            // load hits the cached failure and never tries the network
+            // again, even once the real file is back.
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(SHELL_CACHE).then((cache) => cache.put(req, copy));
+            }
             return res;
           }),
       ),
